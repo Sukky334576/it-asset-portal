@@ -114,4 +114,50 @@ node -e '
 
 ---
 
+## 🤝 6. Collaboration Workflow (แนวทางและกระบวนการทำงานร่วมกันระหว่าง User & AI Agent)
+
+เพื่อให้การทำงานร่วมกันมีประสิทธิภาพสูงสุดและต่อเนื่อง ไม่ว่าจะเปิด Conversation ใหม่กี่ครั้ง ให้ยึดแนวทางปฏิบัติดังนี้:
+
+### 6.1 บทบาทหน้าที่ (Roles & Responsibilities):
+- **User (Product Owner & Lark Admin)**:
+  - กำหนด Business Logic, เงื่อนไขแคมเปญ และ Requirement การใช้งานจริง
+  - อนุมัติสิทธิ์ (Allow) บน Cloudflare Dashboard หรือจัดการ Scope / Redirect URLs ใน Lark Developer Console
+  - ทดสอบ User Flow บนอุปกรณ์จริงร่วมกับทีมงาน
+- **AI Agent (Full-Stack Engineer & DevOps)**:
+  - ออกแบบสถาปัตยกรรมและเขียนโค้ดทั้งระบบ (Frontend UI, Express Server, Cloudflare Worker, Lark REST API)
+  - จัดการ Git Version Control, ตรวจสอบ Secret Scanning ก่อน Push
+  - จัดการ Build & Deploy ขึ้น Cloudflare Workers ผ่าน `wrangler`
+  - ตรวจสอบความถูกต้องด้วย Unit Test, Curl และจับภาพหน้าจอด้วย Puppeteer เพื่อ Verify ก่อนส่งมอบ
+
+---
+
+### 6.2 ขั้นตอนการพัฒนาและส่งมอบงานมาตรฐาน (6-Step Development Lifecycle):
+
+```mermaid
+graph TD
+    A["1. Requirement & Architecture Alignment"] --> B["2. Dual-Environment Implementation (Server & Worker)"]
+    B --> C["3. Automated Browser & API Verification (Puppeteer)"]
+    C --> D["4. Git Commit & Push (Secret Protection Safe)"]
+    D --> E["5. One-Click Cloudflare Deploy (Wrangler)"]
+    E --> F["6. Live Lark Bot Testing & End-to-End Validation"]
+```
+
+1. **Step 1: Alignment**: รับโจทย์ วิเคราะห์ผลกระทบต่อ Lark Base Schema และโครงสร้างข้อมูล
+2. **Step 2: Dual Implementation**: เขียนโค้ดให้รองรับ 2 สภาพแวดล้อมพร้อมกันเสมอ:
+   - `server.js`: Node.js Express สำหรับ Local Development
+   - `worker.js`: Cloudflare Serverless สำหรับ Production
+3. **Step 3: Verification**: ใช้ Puppeteer จำลองหน้าจอและแคปเจอร์ภาพ Screenshot ตรวจสอบ UI ทุกครั้ง
+4. **Step 4: Safe Git Push**: จัดการ Git Commit และระวังการ Mask คีย์ Secret เสมอ เพื่อไม่ให้ติด GitHub Push Protection
+5. **Step 5: Production Deployment**: รัน `npx wrangler deploy` เพื่ออัปเดตระบบจริงไปยัง `shine-toothbrush.workers.dev`
+6. **Step 6: Live Bot & SSO Testing**: ทดสอบยิง Lark Card และตรวจสอบ OAuth SSO จริงกับบัญชีพนักงานเป้าหมาย
+
+---
+
+### 6.3 กฎการสื่อสารและการทำงานที่มีประสิทธิภาพ (Communication Best Practices):
+- **กระชับ ชัดเจน และมีหลักฐาน**: รายงานผลด้วยภาพ Screenshot และผลลัพธ์ JSON จริงเสมอ
+- **Step-by-Step Action สำหรับ User**: หากต้องมีการตั้งค่าบนหน้าเว็บ Lark/Cloudflare ให้สรุปเป็นข้อๆ สั้นๆ พร้อมระบุเมนูและปุ่มที่ต้องกดให้ชัดเจน
+- **Auto-Sync to Markdown**: เมื่อมีการเปลี่ยนคอนฟิก หรือเจอปัญหาใหม่ (Gotcha) ให้บันทึกอัปเดตลงในไฟล์นี้ทันที
+
+---
+
 *เอกสารฉบับนี้ถูกสร้างขึ้นเพื่อใช้เป็น Single Source of Truth สำหรับโปรเจกต์ IT Asset Management Hub.*
