@@ -276,26 +276,74 @@ export default {
       // Verify Asset Device
       if (pathname === "/api/verify" && method === "POST") {
         const body = await request.json().catch(() => ({}));
-        const { record_id, status, notes, photoUrl, assetTag, serialNumber } = body;
-        if (!record_id) return jsonResponse({ ok: false, message: "record_id is required" }, 400);
+        const recordId = body.recordId || body.record_id;
+        const { employeeName, status, notes, updatedTag, assetTag, serialNumber, isUnknownTag } = body;
+
+        if (!recordId) {
+          return jsonResponse({ ok: false, message: "record_id is required" }, 400);
+        }
+
+        let newTag = assetTag || updatedTag;
+        let missingTag = Boolean(isUnknownTag);
+        let newAuditStatus = status || "🟢 ยืนยันแล้ว (Verified)";
+
+        if (isUnknownTag) {
+          newTag = "ไม่ทราบ";
+          missingTag = true;
+          newAuditStatus = "🏷️ ต้องติดป้ายเลขทรัพย์สินใหม่ (Missing Tag)";
+        }
 
         const patch = {
-          "Audit Status (สถานะการยืนยัน)": status || "🟢 ยืนยันแล้ว (Verified)"
+          "Audit Status (สถานะการยืนยัน)": newAuditStatus
         };
-        if (notes) patch["Specs / Notes (รายละเอียด/หมายเหตุ)"] = sanitizeString(notes, 500);
-        if (assetTag) patch["Asset Tag (เลขทรัพย์สิน)"] = sanitizeString(assetTag, 50);
-        if (serialNumber) patch["Serial Number (S/N)"] = sanitizeString(serialNumber, 50);
 
-        await lark.updateRecord(TABLE_MASTER, record_id, patch);
+        if (newTag) {
+          patch["Asset Tag (เลขทรัพย์สิน)"] = sanitizeString(newTag, 50);
+          patch["Missing Tag? (ไม่มีเลขทรัพย์สิน)"] = missingTag;
+        }
+        if (serialNumber) {
+          patch["Serial Number (S/N)"] = sanitizeString(serialNumber, 50);
+        }
+        if (notes) {
+          patch["Specs / Notes (รายละเอียด/หมายเหตุ)"] = sanitizeString(notes, 500);
+        }
+
+        await lark.updateRecord(TABLE_MASTER, recordId, patch);
 
         // Audit Log Entry
         await lark.createRecord(TABLE_AUDIT, {
-          "Brand & Model (ยี่ห้อและรุ่น)": `Verified: ${record_id}`,
-          "IT Review Status (ผลการตรวจสอบโดย IT)": status || "🟢 Verified & Locked (อนุมัติเข้า Master)",
-          "Notes (หมายเหตุจากพนักงาน)": sanitizeString(notes, 500)
+          "Brand & Model (ยี่ห้อและรุ่น)": `Verified Device: ${recordId}`,
+          "Asset Tag (เลขทรัพย์สินบนเครื่อง)": newTag || "-",
+          "Serial Number (S/N บนตัวเครื่อง)": serialNumber || "-",
+          "IT Review Status (ผลการตรวจสอบโดย IT)": newAuditStatus,
+          "Notes (หมายเหตุจากพนักงาน)": `ยืนยันโดย ${employeeName || "User"}. ${notes || ""}`
         }).catch(() => null);
 
         return jsonResponse({ ok: true, message: "บันทึกผลการยืนยันข้อมูลเรียบร้อยแล้ว!" });
+      }
+
+      // Report Discrepancy / Duplicate
+      if (pathname === "/api/report-discrepancy" && method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const recordId = body.recordId || body.record_id;
+        const { employeeName, reason, newHolderName } = body;
+
+        if (!recordId) {
+          return jsonResponse({ ok: false, message: "record_id is required" }, 400);
+        }
+
+        await lark.updateRecord(TABLE_MASTER, recordId, {
+          "Audit Status (สถานะการยืนยัน)": "🔴 ข้อมูลขัดแย้ง/ซ้ำซ้อน (Disputed)"
+        });
+
+        await lark.createRecord(TABLE_AUDIT, {
+          "Brand & Model (ยี่ห้อและรุ่น)": `Disputed: ${recordId}`,
+          "IT Review Status (ผลการตรวจสอบโดย IT)": "🔴 Duplicate / Conflict (พบข้อมูลซ้ำซ้อน)",
+          "Notes (หมายเหตุจากพนักงาน)": `รายงานโดย ${employeeName || "User"}: ${reason || "ไม่ได้ถือครองเครื่องนี้แล้ว"}`,
+          "IT Reviewer Notes (บันทึกของ IT)": `ผู้ครอบครองใหม่ที่แจ้ง: ${newHolderName || "ไม่ระบุ"}`
+        }).catch(() => null);
+
+        return jsonResponse({ ok: true, message: "บันทึกการแจ้งข้อพิพาท/ข้อมูลซ้ำเรียบร้อยแล้ว!" });
       }
 
       // 3. Duplicate check endpoint
