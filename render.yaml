@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: it-asset-management-hub
+    env: node
+    plan: standard
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BASE_TOKEN
+        value: G2IgbTgmmaLnQPs3LPblGz0ngQf
+      - key: ADMIN_PASSWORD
+        generateValue: false
+      - key: BOT_SANDBOX_MODE
+        value: "true"
+      - key: BOT_TEST_WHITELIST
+        value: "ou_454631b08ccd239365dae0b60a0f0aa7,ou_8ea6e249b0ef03ee8ee2b6a58c49e52a"

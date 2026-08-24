@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Asset Hub - ระบบยืนยันถือครองอุปกรณ์ & ยืม-คืน IT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Top Freeze Campaign Alert Bar -->
+  <div class="top-banner" id="topBanner">
+    <div class="banner-content">
+      <span class="pulse-badge">🚨 FREEZE PERIOD 7 วัน</span>
+      <span class="banner-text">แคมเปญยืนยันถือครองอุปกรณ์ IT ประจำตัว — <strong>ห้ามสลับหรือส่งต่อเครื่องระหว่างช่วงเวลานี้</strong></span>
+    </div>
+    <div class="countdown-timer" id="countdownTimer">
+      <span class="cd-label">สิ้นสุดใน:</span>
+      <span class="cd-box"><strong id="cdDays">06</strong> วัน</span>
+      <span class="cd-box"><strong id="cdHours">23</strong> ชม.</span>
+      <span class="cd-box"><strong id="cdMins">59</strong> นาที</span>
+      <span class="cd-box"><strong id="cdSecs">59</strong> วิ</span>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="logo-icon">💻</div>
+        <div class="brand-text">
+          <h1>IT Asset Management Hub</h1>
+          <p>ระบบยืนยันทะเบียนทรัพย์สิน IT & ยืม-คืนอุปกรณ์ (XPO & EDDU)</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-guide-header" id="btnOpenUserGuide">
+          📖 คู่มือการใช้งาน
+        </button>
+        <div class="sync-status" id="syncStatus">
+          <span class="status-dot"></span>
+          <span id="syncText">ซิงก์กับ Lark Base เรียบร้อย</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnRefreshData" title="รีเฟรชข้อมูลล่าสุดจาก Lark Base">
+          🔄 รีเฟรชข้อมูล
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs-wrapper">
+    <div class="nav-tabs">
+      <button class="tab-btn active" data-tab="verifyTab">
+        <span class="tab-icon">👤</span>
+        <span class="tab-title">1. ยืนยันเครื่องของฉัน</span>
+        <span class="tab-badge" id="tabPendingBadge">...</span>
+      </button>
+      <button class="tab-btn" data-tab="registerTab">
+        <span class="tab-icon">➕</span>
+        <span class="tab-title">2. ลงทะเบียนเครื่องใหม่ / เพิ่มเติม</span>
+      </button>
+      <button class="tab-btn" data-tab="loanTab">
+        <span class="tab-icon">🔄</span>
+        <span class="tab-title">3. ระบบยืม-คืนอุปกรณ์ชั่วคราว</span>
+        <span class="tab-badge stock-badge" id="tabStockBadge">... ว่าง</span>
+      </button>
+      <button class="tab-btn" data-tab="adminTab">
+        <span class="tab-icon">📊</span>
+        <span class="tab-title">4. IT Admin Dashboard</span>
+      </button>
+      <button class="tab-btn" data-tab="lifecycleTab">
+        <span class="tab-icon">👥</span>
+        <span class="tab-title">5. ส่งต่องาน 3 ฝ่าย (HR/Admin/IT Hub)</span>
+        <span class="tab-badge" id="tabLifecycleBadge" style="background:#e0e7ff; color:#3730a3; font-weight:bold;">2 งาน</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="main-content">
+
+    <!-- ================= TAB 1: VERIFY MY ASSETS ================= -->
+    <section class="tab-content active" id="verifyTab">
+      <div class="section-hero-with-guide">
+        <div class="section-hero">
+          <h2>🔍 ตรวจสอบและยืนยันอุปกรณ์ IT ประจำตัวคุณ</h2>
+          <p>ค้นหาชื่อของคุณเพื่อดูรายการคอมพิวเตอร์ จอมอนิเตอร์ และอุปกรณ์เสริมที่ระบบบันทึกไว้ จากนั้นกด <strong>"ยืนยันข้อมูลถูกต้อง"</strong> หรือกดแก้ไขหากพบจุดผิดพลาด</p>
+        </div>
+        <button class="btn-help-pill" data-guide-target="guideVerify">
+          💡 ดูวิธีตรวจสอบและยืนยันเครื่อง
+        </button>
+      </div>
+
+      <!-- Locked Identity Banner (Shown in Locked / Personal View Mode) -->
+      <div class="locked-identity-banner" id="lockedIdentityBanner" style="display: none; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #1e293b, #0f172a); color: white; padding: 14px 20px; border-radius: var(--radius-lg); margin-bottom: 20px; box-shadow: var(--shadow-md);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">🔒</div>
+          <div>
+            <div style="font-weight: 700; font-size: 1rem; color: #f8fafc;">โหมดความปลอดภัย: ล็อกตัวตนเฉพาะบุคคล (<span id="lockedEmployeeName">...</span>)</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">ระบบล็อกสิทธิ์เพื่อความปลอดภัย คุณสามารถตรวจสอบและยืนยันได้เฉพาะอุปกรณ์ของคุณเท่านั้น</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <span class="tag" style="background: #065f46; color: #34d399; font-weight: 600; padding: 4px 10px;">🛡️ Identity Verified</span>
+        </div>
+      </div>
+
+      <!-- Search & Filter Card -->
+      <div class="search-panel-card" id="searchPanelCard">
+        <div class="search-input-group">
+          <label for="employeeSearchInput">พิมพ์ชื่อ หรือเลือกชื่อพนักงาน:</label>
+          <div class="autocomplete-container">
+            <input type="text" id="employeeSearchInput" placeholder="พิมพ์ชื่อภาษาอังกฤษ หรือ ภาษาไทย เช่น Tong.Thaksin, Ploy.Manas..." autocomplete="off">
+            <div class="autocomplete-dropdown" id="employeeDropdown"></div>
+          </div>
+        </div>
+        <div class="org-filter-group">
+          <label>กรองตามสังกัด:</label>
+          <div class="pill-group">
+            <button class="pill-btn active" data-org="ALL">ทั้งหมด</button>
+            <button class="pill-btn" data-org="XPO">XPO</button>
+            <button class="pill-btn" data-org="EDDU">EDDU</button>
+            <button class="pill-btn" data-org="RESIGNED" style="color: #dc2626;">🛑 พนักงานที่ลาออก (Closed)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Employee Profile Summary (Shown when selected) -->
+      <div class="employee-profile-card" id="employeeProfileCard" style="display: none;">
+        <div class="profile-header">
+          <div class="profile-avatar" id="profileAvatar">👤</div>
+          <div class="profile-info">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3 id="profileName">--</h3>
+              <span class="tag" id="profileResignedTag" style="display: none; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; font-size: 0.75rem; font-weight: 600;">🛑 Closed / ลาออกแล้ว</span>
+            </div>
+            <div class="profile-meta">
+              <span class="tag tag-org" id="profileOrg">XPO</span>
+              <span class="tag tag-device-count" id="profileDeviceCount">0 อุปกรณ์</span>
+              <span class="tag tag-verify-status" id="profileVerifyStatus">รอตรวจสอบ</span>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <button class="btn btn-primary" id="btnConfirmAll">
+              ✅ ยืนยันอุปกรณ์ทั้งหมดของฉัน
+            </button>
+          </div>
+        </div>
+
+        <!-- Resigned Alert Banner -->
+        <div id="resignedBanner" style="display: none; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px 16px; margin-top: 12px; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #9f1239; font-size: 0.875rem;">
+            <span style="font-size: 1.25rem;">🛑</span>
+            <div>
+              <strong>พนักงานท่านนี้ลาออก / ปิดบัญชี Lark แล้ว (Closed Account)</strong>
+              <div style="font-size: 0.75rem; color: #be123c;">อุปกรณ์ด้านล่างยังคงผูกอยู่กับชื่อนี้ หากเครื่องส่งคืนแล้ว ให้กดปุ่มดึงกลับเข้าคลัง IT</div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-sm" id="btnReclaimSingleResigned">
+            📥 ดึงอุปกรณ์ทั้งหมดกลับเข้าคลังกลาง (Reclaim to Stock)
+          </button>
+        </div>
+      </div>
+
+      <!-- Device List Grid -->
+      <div class="device-grid" id="employeeDeviceGrid">
+        <div class="empty-state">
+          <div class="empty-icon">👆</div>
+          <h3>กรุณาพิมพ์หรือเลือกชื่อพนักงานด้านบน</h3>
+          <p>ระบบจะดึงรายการอุปกรณ์ทั้งหมดที่ลงทะเบียนไว้ภายใต้ชื่อของคุณมาให้ตรวจสอบทันที</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 2: REGISTER NEW ASSET ================= -->
+    <section class="tab-content" id="registerTab">
+      <div class="section-hero-with-guide">
+        <div class="section-hero">
+          <h2>➕ ลงทะเบียนอุปกรณ์ใหม่ / อุปกรณ์ที่ตกหล่น</h2>
+          <p>สำหรับพนักงานที่ยังไม่เคยลงทะเบียน หรือมีอุปกรณ์เพิ่มเติมที่ยังไม่ปรากฏในระบบ Master</p>
+        </div>
+        <button class="btn-help-pill" data-guide-target="guideRegister">
+          💡 ดูวิธีลงทะเบียนเครื่องใหม่
+        </button>
+      </div>
+
+      <div class="form-container-card">
+        <!-- Live Duplicate Alert Banner -->
+        <div class="duplicate-alert-banner" id="duplicateAlertBanner" style="display: none;">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-text" id="duplicateAlertText">
+            ตรวจพบเลขทรัพย์สินซ้ำในระบบ!
+          </div>
+        </div>
+
+        <form id="newAssetForm">
+          <!-- Step 1: Holder Info -->
+          <div class="form-section-title">
+            <span class="step-num">1</span>
+            <h3>ข้อมูลผู้ครอบครอง</h3>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="regEmployeeName">ชื่อ-นามสกุล ผู้ใช้งาน <span class="req">*</span></label>
+              <div class="autocomplete-container">
+                <input type="text" id="regEmployeeName" placeholder="พิมพ์ชื่อ เช่น Tong.Thaksin, Ploy.Manas..." required autocomplete="off">
+                <input type="hidden" id="regEmployeeId">
+                <div class="autocomplete-dropdown" id="regEmployeeDropdown"></div>
+              </div>
+            </div>
+            <div class="form-group col-6">
+              <label for="regOrg">สังกัดบริษัท <span class="req">*</span></label>
+              <select id="regOrg" required>
+                <option value="XPO">XPO</option>
+                <option value="EDDU">EDDU</option>
+                <option value="HQ/ส่วนกลาง">HQ / ส่วนกลาง</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Step 2: Device Specs -->
+          <div class="form-section-title">
+            <span class="step-num">2</span>
+            <h3>ข้อมูลและประเภทอุปกรณ์</h3>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-4">
+              <label for="regDeviceType">ประเภทอุปกรณ์ <span class="req">*</span></label>
+              <select id="regDeviceType" required>
+                <option value="Laptop (NB)">💻 โน้ตบุ๊ก (Laptop / NB)</option>
+                <option value="Desktop (PC)">🖥️ คอมพิวเตอร์ตั้งโต๊ะ (PC / Mac Mini)</option>
+                <option value="Monitor (MO)">🖥️ จอมอนิเตอร์ (Monitor)</option>
+                <option value="Adapter (AD)">🔌 สายชาร์จ / Adapter</option>
+                <option value="Mouse/Keyboard (MU/KB)">🖱️ เมาส์ / คีย์บอร์ด</option>
+                <option value="Storage (SSD/HDD)">💾 ฮาร์ดดิสก์พกพา (SSD / HDD)</option>
+                <option value="Phone/Tablet">📱 โทรศัพท์ / แท็บเล็ต</option>
+                <option value="Hub/Dongle">🔌 หัวแปลง / USB Hub / สาย HDMI</option>
+                <option value="Other">📦 อุปกรณ์อื่นๆ</option>
+              </select>
+            </div>
+            <div class="form-group col-4">
+              <label for="regBrand">ยี่ห้อ (Brand) <span class="req">*</span></label>
+              <select id="regBrand" required>
+                <option value="Apple">Apple</option>
+                <option value="Lenovo">Lenovo (ThinkPad)</option>
+                <option value="Dell">Dell</option>
+                <option value="HP">HP</option>
+                <option value="Asus">Asus</option>
+                <option value="Acer">Acer</option>
+                <option value="Anitech">Anitech</option>
+                <option value="Kingston">Kingston</option>
+                <option value="Logitech">Logitech</option>
+                <option value="Other">ยี่ห้ออื่นๆ</option>
+              </select>
+            </div>
+            <div class="form-group col-4">
+              <label for="regDeviceName">ชื่อรุ่น / สเปก <span class="req">*</span></label>
+              <input type="text" id="regDeviceName" placeholder="เช่น MacBook Pro 14 M3, ThinkPad T14 Gen 3..." required>
+            </div>
+          </div>
+
+          <!-- Step 3: Asset Tag & Serial with Live Duplicate Detection -->
+          <div class="form-section-title">
+            <span class="step-num">3</span>
+            <h3>เลขทรัพย์สิน และ Serial Number (ระบบตรวจจับซ้ำ Real-time)</h3>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="regAssetTag">เลขทรัพย์สิน (Asset Tag บนสติกเกอร์) <span class="req">*</span></label>
+              <input type="text" id="regAssetTag" placeholder="เช่น COM-00123 หรือ IT-CAD-..." autocomplete="off">
+              <div class="checkbox-group">
+                <input type="checkbox" id="regUnknownTag">
+                <label for="regUnknownTag" class="checkbox-label">
+                  🏷️ <strong>ไม่ทราบเลขทรัพย์สิน / ป้ายหลุดหาย</strong> (ระบบจะข้ามการตรวจซ้ำ และติด Flag ให้ IT ไปติดป้ายใหม่)
+                </label>
+              </div>
+            </div>
+            <div class="form-group col-6">
+              <label for="regSerial">Serial Number (S/N ตัวเครื่องจริง)</label>
+              <input type="text" id="regSerial" placeholder="เช่น MMTJDST00351901DA83W01 หรือ XRQ1P7RL73..." autocomplete="off">
+              <div class="checkbox-group">
+                <input type="checkbox" id="regUnknownSN">
+                <label for="regUnknownSN" class="checkbox-label">
+                  🔍 <strong>ไม่ทราบ S/N / มองไม่เห็น</strong>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Condition & Notes -->
+          <div class="form-section-title">
+            <span class="step-num">4</span>
+            <h3>สภาพการใช้งานและหมายเหตุ</h3>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="regCondition">สภาพเครื่องปัจจุบัน <span class="req">*</span></label>
+              <select id="regCondition" required>
+                <option value="🟢 สมบูรณ์ ใช้งานได้ปกติ">🟢 สมบูรณ์ ใช้งานได้ปกติ</option>
+                <option value="🟡 มีรอยตำหนิ/เสื่อมสภาพบางส่วน">🟡 มีรอยตำหนิ / เสื่อมสภาพบางส่วน</option>
+                <option value="🔴 ชำรุดเสียหาย/รอส่งซ่อม">🔴 ชำรุดเสียหาย / รอส่งซ่อม</option>
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label for="regNotes">หมายเหตุเพิ่มเติม</label>
+              <input type="text" id="regNotes" placeholder="เช่น เพิ่ม RAM 16GB, ได้รับมอบจากแผนก...">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg" id="btnSubmitNewAsset">
+              🚀 บันทึกลงทะเบียน & ยืนยันเครื่องเข้าสู่ระบบ
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= TAB 3: TEMPORARY LOAN & RETURN KIOSK ================= -->
+    <section class="tab-content" id="loanTab">
+      <div class="section-hero-with-guide">
+        <div class="section-hero">
+          <h2>🔄 ระบบยืม-คืนอุปกรณ์ชั่วคราว (Temporary Loan & Return)</h2>
+          <p>ศูนย์บริการยืมอุปกรณ์เสริม, สายแปลง, จอมอนิเตอร์, และเครื่องสำรองระหว่างส่งซ่อม พร้อมระบบส่งคืนอุปกรณ์ในคลิกเดียว</p>
+        </div>
+        <button class="btn-help-pill" data-guide-target="guideLoan">
+          💡 ดูวิธียืมและคืนอุปกรณ์
+        </button>
+      </div>
+
+      <div class="loan-tabs-subnav">
+        <button class="subtab-btn active" data-subtab="subStock">📦 คลังอุปกรณ์พร้อมให้ยืม (Available Stock)</button>
+        <button class="subtab-btn" data-subtab="subMyLoans">📑 รายการที่กำลังยืมอยู่ & คืนอุปกรณ์ (Active Loans)</button>
+        <button class="subtab-btn" data-subtab="subBorrowForm">📝 ยื่นคำขอยืมชั่วคราว (Quick Borrow)</button>
+        <button class="subtab-btn" data-subtab="subReturnHistory">✅ ประวัติการคืนอุปกรณ์ (Return History)</button>
+      </div>
+
+      <!-- Subtab 1: Available Stock for Temporary Loan -->
+      <div class="subtab-content active" id="subStock">
+        <div class="stock-filter-bar">
+          <div class="filter-text">แสดงอุปกรณ์คงคลังที่มีสถานะ <strong>"พร้อมใช้งานในคลัง"</strong> สามารถกดยืมด่วนได้ทันที:</div>
+          <div class="stock-category-pills">
+            <button class="stock-cat-pill active" data-cat="ALL">ทั้งหมด</button>
+            <button class="stock-cat-pill" data-cat="Laptop">💻 โน้ตบุ๊ก</button>
+            <button class="stock-cat-pill" data-cat="Monitor">🖥️ จอมอนิเตอร์</button>
+            <button class="stock-cat-pill" data-cat="Adapter">🔌 สายชาร์จ/Adapter</button>
+            <button class="stock-cat-pill" data-cat="Hub">🔌 สายแปลง/Dongle/HDMI</button>
+            <button class="stock-cat-pill" data-cat="Mouse">🖱️ เมาส์/คีย์บอร์ด</button>
+          </div>
+        </div>
+        <div class="stock-grid" id="availableStockGrid">
+          <div class="loading-spinner">กำลังโหลดรายการสต็อก...</div>
+        </div>
+      </div>
+
+      <!-- Subtab 2: Active Loans with 1-Click Return -->
+      <div class="subtab-content" id="subMyLoans">
+        <div class="loans-table-card">
+          <div class="table-header-action-bar">
+            <h3>📑 รายการอุปกรณ์ที่อยู่ระหว่างการยืมในขณะนี้</h3>
+            <span class="text-muted" style="font-size: 0.8125rem;">(เมื่อนำอุปกรณ์มาคืน ให้กดปุ่ม "ส่งคืนอุปกรณ์" เพื่ออัปเดตสต็อกเข้าคลังทันที)</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>เลขทรัพย์สิน</th>
+                <th>ชื่ออุปกรณ์</th>
+                <th>ผู้ขอยืม</th>
+                <th>สังกัด</th>
+                <th>วันที่เริ่มยืม</th>
+                <th>กำหนดส่งคืน</th>
+                <th>สถานะ / วันคงเหลือ</th>
+                <th>การส่งคืน</th>
+              </tr>
+            </thead>
+            <tbody id="activeLoansTbody">
+              <tr><td colspan="8" class="text-center">กำลังโหลดข้อมูล...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Subtab 3: Borrow Request Form with Duration Presets -->
+      <div class="subtab-content" id="subBorrowForm">
+        <div class="form-container-card">
+          <form id="loanRequestForm">
+            <div class="form-section-title">
+              <span class="step-num">⚡</span>
+              <h3>ข้อมูลผู้ขอยืมและประเภทการยืม</h3>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group col-6">
+                <label for="loanBorrowerName">ชื่อผู้ขอยืม <span class="req">*</span></label>
+                <div class="autocomplete-container">
+                  <input type="text" id="loanBorrowerName" placeholder="พิมพ์ชื่อ เช่น Tong.Thaksin, Ploy.Manas..." required autocomplete="off">
+                  <input type="hidden" id="loanBorrowerId">
+                  <div class="autocomplete-dropdown" id="loanBorrowerDropdown"></div>
+                </div>
+              </div>
+              <div class="form-group col-6">
+                <label for="loanOrg">สังกัดบริษัท <span class="req">*</span></label>
+                <select id="loanOrg" required>
+                  <option value="XPO">XPO</option>
+                  <option value="EDDU">EDDU</option>
+                  <option value="HQ/ส่วนกลาง">HQ/ส่วนกลาง</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-section-title">
+              <span class="step-num">📦</span>
+              <h3>อุปกรณ์และระยะเวลายืม</h3>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-6">
+                <label for="loanAssetSelect">เลือกอุปกรณ์ที่ต้องการยืม <span class="req">*</span></label>
+                <select id="loanAssetSelect" required>
+                  <option value="">-- กรุณาเลือกอุปกรณ์ที่ว่าง --</option>
+                </select>
+              </div>
+              <div class="form-group col-6">
+                <label for="loanTypeSelect">ประเภทการยืมชั่วคราว <span class="req">*</span></label>
+                <select id="loanTypeSelect" required>
+                  <option value="ยืมด่วนประจำวัน (Daily In-Office)">🏢 ยืมใช้งานภายในออฟฟิศ (คืนในวัน)</option>
+                  <option value="ยืมออกหน้างาน / พบลูกค้า (On-Site Client)">🚗 ยืมออกทำงานนอกสถานที่ / พบลูกค้า</option>
+                  <option value="ยืมทดแทนเครื่องส่งซ่อม (Backup Unit)">🛠️ ยืมใช้งานทดแทนเครื่องส่งซ่อม</option>
+                  <option value="ยืมสำหรับโปรเจกต์พิเศษ (Special Project)">📂 ยืมสำหรับโปรเจกต์ระยะสั้น</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Quick Duration Presets -->
+            <div class="duration-preset-group">
+              <label>เลือกระยะเวลายืมด่วน:</label>
+              <div class="preset-chips">
+                <button type="button" class="preset-chip active" data-days="1">⚡ 1 วัน (คืนพรุ่งนี้)</button>
+                <button type="button" class="preset-chip" data-days="3">📅 3 วัน</button>
+                <button type="button" class="preset-chip" data-days="7">📅 1 สัปดาห์ (7 วัน)</button>
+                <button type="button" class="preset-chip" data-days="14">📅 2 สัปดาห์ (14 วัน)</button>
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 14px;">
+              <div class="form-group col-6">
+                <label for="loanExpectedReturn">กำหนดวันที่ส่งคืน <span class="req">*</span></label>
+                <input type="date" id="loanExpectedReturn" required>
+              </div>
+              <div class="form-group col-6">
+                <label for="loanPurpose">วัตถุประสงค์การใช้งาน <span class="req">*</span></label>
+                <input type="text" id="loanPurpose" placeholder="เช่น ใช้ประชุมนำเสนองาน, ออกงานนอกสถานที่..." required>
+              </div>
+            </div>
+
+            <div class="form-section-title">
+              <span class="step-num">🔌</span>
+              <h3>อุปกรณ์ส่วนควบที่ส่งมอบ (Accessories Checklist)</h3>
+            </div>
+            <div class="accessories-checklist">
+              <label class="chk-item"><input type="checkbox" name="acc" value="สายชาร์จ/Adapter" checked> สายชาร์จ / Adapter</label>
+              <label class="chk-item"><input type="checkbox" name="acc" value="เมาส์"> เมาส์ (Mouse)</label>
+              <label class="chk-item"><input type="checkbox" name="acc" value="กระเป๋าโน้ตบุ๊ก"> กระเป๋าโน้ตบุ๊ก</label>
+              <label class="chk-item"><input type="checkbox" name="acc" value="หัวแปลง HDMI/Type-C"> หัวแปลง HDMI / Type-C Dongle</label>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary btn-lg" id="btnSubmitLoanRequest">
+                📤 ยื่นคำขอยืมอุปกรณ์ชั่วคราว
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Subtab 4: Return History Log -->
+      <div class="subtab-content" id="subReturnHistory">
+        <div class="loans-table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>เลขทรัพย์สิน</th>
+                <th>ชื่ออุปกรณ์</th>
+                <th>วันที่เริ่มยืม</th>
+                <th>วันที่ส่งคืนจริง</th>
+                <th>สถานะการส่งคืน</th>
+                <th>หมายเหตุ / สภาพ</th>
+              </tr>
+            </thead>
+            <tbody id="returnHistoryTbody">
+              <tr><td colspan="6" class="text-center">กำลังโหลดประวัติการคืน...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 4: IT ADMIN DASHBOARD ================= -->
+    <section class="tab-content" id="adminTab">
+      
+      <!-- 1. ADMIN LOGIN VIEW (Shown when NOT authenticated) -->
+      <div class="admin-login-wrapper" id="adminLoginView">
+        <div class="admin-login-card">
+          <div class="lock-icon-circle">🔐</div>
+          <h2>พื้นที่เฉพาะเจ้าหน้าที่ IT Admin</h2>
+          <p>กรุณากรอกรหัสผ่านผู้ดูแลระบบ (IT Admin Password) เพื่อเข้าถึงรายงานภาพรวมความคืบหน้าและข้อมูลทะเบียนทรัพย์สินทั้งหมด</p>
+          
+          <form id="adminLoginForm">
+            <div class="form-group">
+              <label for="adminPasswordInput">รหัสผ่าน IT Admin:</label>
+              <input type="password" id="adminPasswordInput" placeholder="กรอกรหัสผ่าน Admin..." required autocomplete="current-password">
+            </div>
+            <div class="login-error-msg" id="adminLoginError" style="display: none;"></div>
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnAdminLogin">
+              🔓 เข้าสู่ระบบ IT Admin
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- 2. ADMIN DASHBOARD VIEW (Shown when authenticated) -->
+      <div class="admin-dashboard-container" id="adminDashboardView" style="display: none;">
+        <div class="section-hero admin-hero-bar">
+          <div>
+            <h2>📊 IT Admin Control Center & Freeze Campaign Monitor</h2>
+            <p>ติดตามความคืบหน้าการยืนยันข้อมูลอุปกรณ์ 7 วัน รายชื่อพนักงานที่ยังไม่ยืนยัน และรายการที่ต้องติดป้ายบาร์โค้ดใหม่</p>
+          </div>
+          <button class="btn btn-danger btn-sm" id="btnAdminLogout">
+            🚪 ออกจากระบบ Admin
+          </button>
+        </div>
+
+        <!-- KPI Metrics Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon blue">📦</div>
+            <div class="metric-value" id="metricTotal">369</div>
+            <div class="metric-label">อุปกรณ์ทั้งหมดในระบบ</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon green">✅</div>
+            <div class="metric-value" id="metricVerified">0</div>
+            <div class="metric-label">ยืนยันแล้ว (<span id="metricVerifiedPct">0%</span>)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon yellow">⏳</div>
+            <div class="metric-value" id="metricPending">369</div>
+            <div class="metric-label">รอพนักงานยืนยัน</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon orange">🏷️</div>
+            <div class="metric-value" id="metricMissingTag">0</div>
+            <div class="metric-label">ต้องติดป้ายเลขทรัพย์สินใหม่</div>
+          </div>
+        </div>
+
+        <!-- Department Progress Breakdown -->
+        <div class="admin-grid">
+          <div class="admin-card col-6">
+            <div class="admin-card-header">
+              <h3>🏢 ความคืบหน้ารายบริษัท (XPO vs EDDU)</h3>
+            </div>
+            <div class="progress-section">
+              <div class="progress-item">
+                <div class="progress-label">
+                  <span>XPO</span>
+                  <span id="xpoProgressText">0 / 0 (0%)</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill blue" id="xpoProgressBar" style="width: 0%;"></div>
+                </div>
+              </div>
+              <div class="progress-item">
+                <div class="progress-label">
+                  <span>EDDU</span>
+                  <span id="edduProgressText">0 / 0 (0%)</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill orange" id="edduProgressBar" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-card col-6">
+            <div class="admin-card-header">
+              <h3>💬 เครื่องมือส่งทวงใน Lark Chat</h3>
+            </div>
+            <div class="reminder-tool">
+              <p>คัดลอกข้อความมาตรฐานพร้อมรายชื่อพนักงานที่ยังไม่ยืนยัน เพื่อส่งแจ้งเตือนใน Lark Chat ประจำกลุ่ม</p>
+              <button class="btn btn-secondary btn-block" id="btnCopyReminderText">
+                📋 คัดลอกข้อความแจ้งเตือน Freeze Campaign
+              </button>
+              <div class="copy-success" id="copySuccessMsg" style="display: none;">
+                ✅ คัดลอกข้อความสำเร็จ! นำไปวางใน Lark Chat ได้ทันที
+              </div>
+
+              <div style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 12px;">
+                <button class="btn btn-warning btn-block btn-sm" id="btnTriggerBatchBot">
+                  ⚡ รันส่งการ์ดทวงคนที่ยังไม่ยืนยันอัตโนมัติ (Batch Scheduler)
+                </button>
+                <div id="batchBotStatus" style="display: none; font-size: 0.75rem; margin-top: 6px; color: var(--text-muted);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lark Bot 1-on-1 Interactive Test Console -->
+          <div class="admin-card col-6">
+            <div class="admin-card-header">
+              <h3>🤖 Lark Bot 1-on-1 Test Console</h3>
+              <span class="tag tag-org" id="botSandboxBadge">🛡️ Whitelist Mode</span>
+            </div>
+            <div class="bot-test-tool">
+              <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 12px;">
+                ส่งการ์ดทดสอบแบบ 1-on-1 เข้าแชท Lark เพื่อตรวจสอบหน้าตาการ์ดและปุ่มกดยืนยันในแชท
+              </p>
+              
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label for="botTestUserSelect" style="font-size: 0.75rem; font-weight: 600;">เลือกพนักงานเป้าหมายที่ต้องการทดสอบ:</label>
+                <select id="botTestUserSelect" style="font-size: 0.875rem; padding: 8px 12px;">
+                  <option value="">-- เลือกรายชื่อพนักงาน --</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 14px;">
+                <label for="botTestCardType" style="font-size: 0.75rem; font-weight: 600;">เลือกประเภทการ์ดที่ต้องการส่ง:</label>
+                <select id="botTestCardType" style="font-size: 0.875rem; padding: 8px 12px;">
+                  <option value="verification">🚨 การ์ดทวงยืนยันเครื่อง 7 วัน (มีปุ่มกดยืนยันในแชท 1 คลิก)</option>
+                  <option value="loan_due">⏰ การ์ดเตือนครบกำหนดส่งคืนอุปกรณ์ชั่วคราว</option>
+                  <option value="loan_overdue">🚨 การ์ดเตือนเกินกำหนดส่งคืน (Overdue)</option>
+                  <option value="receipt">🎉 การ์ดใบเสร็จยืนยันขึ้นทะเบียนใหม่สำเร็จ</option>
+                </select>
+              </div>
+
+              <button class="btn btn-primary btn-block btn-sm" id="btnSendTestCard">
+                🚀 ส่งการ์ดทดสอบเข้าแชท Lark ทันที
+              </button>
+
+              <div id="botTestResultAlert" style="display: none; margin-top: 10px; font-size: 0.8125rem; padding: 8px 12px; border-radius: 6px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Smart Duplicate Cleaner Card -->
+        <div class="admin-card full-width" style="border: 1px solid #fed7aa; background: #fffdfa; margin-top: 16px;">
+          <div class="admin-card-header" style="border-bottom: 1px solid #fed7aa; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.25rem;">🧹</span>
+              <h3 style="color: #9a3412;">ศูนย์ล้างข้อมูลซ้ำซ้อนอัจฉริยะ (1-Click Duplicate Cleanup)</h3>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <span class="tag" id="dupReportedBadge" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">0 ที่พนักงานแจ้งซ้ำ</span>
+              <span class="tag" id="dupDetectedBadge" style="background:#ffedd5; color:#9a3412; border:1px solid #fdba74;">0 คู่ S/N ซ้ำ</span>
+            </div>
+          </div>
+          <div style="padding: 16px;">
+            <p style="font-size: 0.875rem; color: #78350f; margin-bottom: 14px;">
+              ระบบสแกนพบรายการที่พนักงานกดแจ้งข้อมูลซ้ำ และรายการที่มีเลข Serial Number (S/N) ซ้ำกันในฐานข้อมูลกลาง คุณสามารถสั่งลบแถวคู่แฝดที่ซ้ำซ้อนทิ้งได้ในคลิกเดียวโดยไม่ต้องเปิดเทียบทีละรายการ
+            </p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+              <button class="btn btn-danger btn-sm" id="btnDeleteReportedDuplicates">
+                🗑️ สั่งลบแถวที่พนักงานแจ้งซ้ำทั้งหมด (<span id="btnReportedCount">0</span> รายการ)
+              </button>
+              <button class="btn btn-warning btn-sm" id="btnAutoCleanSnDuplicates">
+                🤖 ลบแถว S/N ซ้ำอัตโนมัติ (คงเหลือแถวสมบูรณ์ไว้ 1 แถว)
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnRefreshDuplicates">
+                🔄 สแกนข้อมูลซ้ำใหม่
+              </button>
+            </div>
+
+            <!-- Preview Duplicate Table -->
+            <div class="table-responsive" style="max-height: 260px; overflow-y: auto; border: 1px solid #fed7aa; border-radius: 8px;">
+              <table class="data-table" style="font-size: 0.8125rem;">
+                <thead style="background: #ffedd5;">
+                  <tr>
+                    <th>ประเภท</th>
+                    <th>ผู้ถือครอง</th>
+                    <th>อุปกรณ์</th>
+                    <th>Asset Tag</th>
+                    <th>Serial Number (S/N)</th>
+                    <th>สถานะ / หมายเหตุ</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="duplicatePreviewTbody">
+                  <tr><td colspan="7" class="text-center text-muted">กำลังสแกนหาข้อมูลซ้ำในระบบ...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resigned Staff Tracker Card -->
+        <div class="admin-card full-width" style="border: 1px solid #fecdd3; background: #fff5f5; margin-top: 16px;">
+          <div class="admin-card-header" style="border-bottom: 1px solid #fecdd3; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.25rem;">🚪</span>
+              <h3 style="color: #9f1239;">ศูนย์จัดการอุปกรณ์พนักงานที่ลาออกแล้ว (Resigned Staff Asset Tracker)</h3>
+            </div>
+            <span class="tag" id="resignedStaffBadge" style="background:#ffe4e6; color:#9f1239; border:1px solid #fda4af; font-weight:600;">0 คนลาออก (0 อุปกรณ์)</span>
+          </div>
+          <div style="padding: 16px;">
+            <p style="font-size: 0.875rem; color: #881337; margin-bottom: 14px;">
+              ระบบสแกนเปรียบเทียบกับ Lark Contact API พบรายชื่อพนักงานที่ลาออก/ปิดบัญชีแล้ว (Closed) แต่ยังมีอุปกรณ์ผูกค้างอยู่ในชื่อ คุณสามารถสั่งดึงเครื่องทั้งหมดกลับเข้าคลัง IT กลางได้ในคลิกเดียว
+            </p>
+            <!-- 1. Handover / Transferred Devices Section -->
+            <div style="background: #ffffff; border: 1px solid #fecdd3; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1.1rem;">🔄</span>
+                  <strong style="color: #9f1239; font-size: 0.9375rem;">ตรวจพบอุปกรณ์ที่ถูกส่งต่อให้คนใหม่แล้ว (มีพนักงานปัจจุบันลงทะเบียนถือครองซ้ำ)</strong>
+                </div>
+                <span class="tag" id="handoverCountBadge" style="background:#fee2e2; color:#b91c1c; font-weight:700;">0 รายการส่งต่อ</span>
+              </div>
+              <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 10px;">
+                ระบบจับคู่ Serial Number / Asset Tag ตรงกันระหว่างพนักงานที่ลาออกกับพนักงานปัจจุบัน คุณสามารถสั่ง <strong>"อนุมัติโอนย้าย"</strong> เพื่อให้สิทธิ์เป็นของคนปัจจุบันและลบแถวเก่าของคนลาออกทิ้งอัตโนมัติ
+              </p>
+              <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn btn-primary btn-sm" id="btnBatchResolveHandovers" style="background: #e11d48; border-color: #be123c;">
+                  ⚡ อนุมัติการส่งต่อและลบแถวคนลาออกทั้งหมดใน 1 คลิก (<span id="handoverBtnCount">0</span> รายการ)
+                </button>
+              </div>
+              <div class="table-responsive" style="max-height: 220px; overflow-y: auto; border: 1px solid #fee2e2; border-radius: 6px;">
+                <table class="data-table" style="font-size: 0.8125rem;">
+                  <thead style="background: #fff1f2;">
+                    <tr>
+                      <th>อุปกรณ์ / S/N / Tag</th>
+                      <th>เจ้าของเดิม (🛑 คนลาออก)</th>
+                      <th>ผู้ถือครองใหม่ (🟢 คนปัจจุบัน)</th>
+                      <th>สังกัด</th>
+                      <th>สถานะปัจจุบัน</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="resignedHandoverTbody">
+                    <tr><td colspan="6" class="text-center text-muted">กำลังสแกนหาอุปกรณ์ที่ถูกส่งต่อ...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Manual Resigned Staff Tagging Bar -->
+            <div style="display: flex; gap: 8px; align-items: center; background: #fff1f2; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; border: 1px dashed #fda4af; flex-wrap: wrap;">
+              <span style="font-size: 0.8125rem; font-weight: 600; color: #9f1239;">➕ ระบุรายชื่อพนักงานที่ลาออกเพิ่มเติมด้วยตนเอง:</span>
+              <select id="manualResignedSelect" style="padding: 4px 8px; font-size: 0.8125rem; border: 1px solid #fca5a5; border-radius: 4px; flex: 1; min-width: 200px; max-width: 280px;">
+                <option value="">-- เลือกรายชื่อพนักงาน --</option>
+              </select>
+              <button class="btn btn-sm btn-danger" id="btnMarkResignedManual" style="padding: 4px 12px; font-size: 0.8125rem;">
+                🛑 ระบุว่าลาออกแล้ว
+              </button>
+            </div>
+
+            <!-- 2. Orphaned Resigned Staff Table -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <strong style="color: #881337; font-size: 0.9375rem;">📦 อุปกรณ์ที่ค้างอยู่กับพนักงานที่ลาออก (ยังไม่มีใครลงทะเบียนรับไป)</strong>
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+              <button class="btn btn-danger btn-sm" id="btnBatchReclaimAllResigned">
+                📥 ดึงเครื่องที่เหลือทั้งหมดกลับเข้าคลังกลาง (1-Click Reclaim All to Stock)
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnRefreshResigned">
+                🔄 ซิงก์ข้อมูลใหม่
+              </button>
+            </div>
+
+            <!-- Resigned Staff Table -->
+            <div class="table-responsive" style="max-height: 260px; overflow-y: auto; border: 1px solid #fecdd3; border-radius: 8px;">
+              <table class="data-table" style="font-size: 0.8125rem;">
+                <thead style="background: #ffe4e6;">
+                  <tr>
+                    <th>พนักงาน (Lark Status)</th>
+                    <th>สังกัด</th>
+                    <th>จำนวนอุปกรณ์</th>
+                    <th>รายการอุปกรณ์ที่ถือครอง</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="resignedStaffTbody">
+                  <tr><td colspan="5" class="text-center text-muted">กำลังโหลดรายชื่อพนักงานที่ลาออก...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Missing Tag Worklist -->
+        <div class="admin-card full-width">
+          <div class="admin-card-header">
+            <h3>🏷️ รายการเครื่องที่ "ไม่ทราบเลขทรัพย์สิน" (Worklist สำหรับ IT นัดติดสติกเกอร์ใหม่)</h3>
+            <span class="badge badge-warning" id="missingTagBadgeCount">0 รายการ</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ผู้ถือครอง</th>
+                  <th>สังกัด</th>
+                  <th>ประเภท</th>
+                  <th>ชื่อรุ่น / อุปกรณ์</th>
+                  <th>Serial Number</th>
+                  <th>หมายเหตุ / Legacy ID</th>
+                </tr>
+              </thead>
+              <tbody id="missingTagTbody">
+                <tr><td colspan="6" class="text-center">ไม่มีรายการตกค้าง</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- IT Audit Logs & Historical Deletion Trail -->
+        <div class="admin-card full-width" style="margin-top: 16px;">
+          <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.25rem;">📜</span>
+              <h3>บันทึกประวัติการตรวจสอบย้อนหลัง & การลบ/ส่งต่อเครื่อง (Audit Trail & Deletion Log)</h3>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="tag tag-org" id="auditLogCountBadge">0 รายการ Log</span>
+              <button class="btn btn-secondary btn-sm" id="btnRefreshAuditLogs">🔄 รีเฟรช Log</button>
+            </div>
+          </div>
+          <div style="padding: 16px;">
+            <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 12px;">
+              ตารางนี้บันทึกข้อมูลย้อนหลังที่ซิงก์ตรงกับตาราง <strong>IT Audit Campaign (<code>tblzKjtJuoAifQKS</code>)</strong> ใน Lark Base อย่างถาวร ไม่ว่าจะเป็นการลบแถวซ้ำ การส่งต่อเครื่องจากคนลาออก หรือการดึงเครื่องเข้าคลัง เพื่อใช้ตรวจสอบย้อนหลังกรณีเครื่องชำรุดหรือมีปัญหา
+            </p>
+            <div class="table-responsive" style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+              <table class="data-table" style="font-size: 0.8125rem;">
+                <thead>
+                  <tr>
+                    <th>สถานะการบันทึก</th>
+                    <th>สังกัด</th>
+                    <th>ประเภท</th>
+                    <th>อุปกรณ์ / รุ่น</th>
+                    <th>Asset Tag / S/N</th>
+                    <th>หมายเหตุ / ประวัติการส่งต่อ</th>
+                    <th>บันทึกของ IT / หลักฐาน</th>
+                  </tr>
+                </thead>
+                <tbody id="auditLogsTbody">
+                  <tr><td colspan="7" class="text-center text-muted">กำลังโหลดประวัติ Audit Log...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 5: LIFECYCLE HUB (HR ➔ ADMIN ➔ IT) ================= -->
+    <section class="tab-content" id="lifecycleTab">
+
+      <!-- 1. ROLE LOGIN VIEW (Shown when unauthenticated) -->
+      <div class="admin-login-container" id="lifecycleLoginView">
+        <div class="admin-login-card" style="max-width: 480px;">
+          <div class="admin-login-icon" style="background: #eff6ff; color: #3b82f6;">🔐</div>
+          <h2>เข้าสู่ระบบเฉพาะเจ้าหน้าที่ 3 ฝ่าย</h2>
+          <p>ระบบนี้สงวนสิทธิ์เฉพาะฝ่ายบุคคล (HR), ฝ่ายธุรการ (General Admin) และฝ่ายไอที (IT Support) สำหรับบริหารจัดการคนเข้า-คนออกเท่านั้น</p>
+
+          <form id="lifecycleLoginForm" class="admin-login-form">
+            <div class="form-group">
+              <label for="lifecycleRoleSelect">เลือกบทบาทของคุณ (Select Role) <span class="req">*</span></label>
+              <select id="lifecycleRoleSelect" style="padding: 10px; font-weight: 600;">
+                <option value="HR">👔 HR / ฝ่ายบุคคล (คุณ Filmmy / ทีม HR)</option>
+                <option value="ADMIN">📦 General Admin / ฝ่ายธุรการ (คุณ Ploy / ทีม Admin)</option>
+                <option value="IT">💻 IT Support / ฝ่ายไอที (คุณ / ทีม IT)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="lifecyclePasswordInput">รหัสผ่านยืนยันสิทธิ์ (Passcode / PIN) <span class="req">*</span></label>
+              <input type="password" id="lifecyclePasswordInput" placeholder="กรอกรหัสผ่านเจ้าหน้าที่..." required autocomplete="current-password">
+            </div>
+
+            <div class="login-error-msg" id="lifecycleLoginError" style="display: none;"></div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnLifecycleLogin">
+              🔓 ยืนยันตัวตนเข้าใช้งาน
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- 2. LIFECYCLE DASHBOARD VIEW (Shown when authenticated) -->
+      <div class="lifecycle-dashboard-container" id="lifecycleDashboardView" style="display: none;">
+        <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 18px 22px; margin-bottom: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h2 style="font-size: 1.35rem; margin-bottom: 4px; color: var(--text-main);">👥 ศูนย์ส่งต่องาน 3 ฝ่าย (HR ➔ Admin ➔ IT Lifecycle Hub)</h2>
+              <p style="font-size: 0.8125rem; color: var(--text-muted); margin: 0;">ระบบบริหารจัดการคนเข้า-คนออก และวงจรชีวิตอุปกรณ์ IT แบบ 4 สเต็ป เพื่อให้ทุกฝ่ายทำงานสอดประสานกัน ไร้รอยต่อ</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <div style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 0.8125rem; display: flex; align-items: center; gap: 6px;">
+                <span id="lifecycleActiveRoleBadge">👔 HR Mode</span>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btnLifecycleLogout" style="color: var(--danger); border-color: var(--danger-border);">
+                🚪 ออกจากระบบ
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+            <button class="btn btn-danger btn-sm" id="btnOpenOffboardingModal" style="display: flex; align-items: center; gap: 6px;">
+              <span>🚪</span> <strong>1. HR แจ้งพนักงานลาออก (Offboarding Task)</strong>
+            </button>
+            <button class="btn btn-primary btn-sm" id="btnOpenOnboardingModal" style="display: flex; align-items: center; gap: 6px;">
+              <span>✨</span> <strong>2. HR แจ้งพนักงานเข้าใหม่ (Onboarding Kit)</strong>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Filter & Workflow Summary Metrics -->
+        <div class="admin-grid" style="margin-bottom: 20px;">
+          <div class="admin-card" style="padding: 16px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 4px;">🏢 กรองตามสังกัดบริษัท:</div>
+            <div class="filter-pills" style="margin: 0;" id="lifecycleOrgFilters">
+              <button class="filter-pill active" data-org="ALL">ทั้งหมด</button>
+              <button class="filter-pill" data-org="XPO">XPO</button>
+              <button class="filter-pill" data-org="EDDU">EDDU</button>
+            </div>
+          </div>
+
+          <div class="admin-card" style="padding: 16px; border-left: 4px solid #ef4444;">
+            <div style="font-size: 0.8125rem; color: #991b1b; font-weight: 600;">🔴 1. Admin รอรับคืนของ</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;" id="statWaitingAdminCollection">0 งาน</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">คนลาออกนำเครื่องมาคืน</div>
+          </div>
+
+          <div class="admin-card" style="padding: 16px; border-left: 4px solid #f59e0b;">
+            <div style="font-size: 0.8125rem; color: #92400e; font-weight: 600;">🟡 2. IT รอลง OS / ตรวจเช็ค</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #d97706;" id="statWaitingItReimage">0 งาน</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">ล้างเครื่อง / ลง Windows ใหม่</div>
+          </div>
+
+          <div class="admin-card" style="padding: 16px; border-left: 4px solid #3b82f6;">
+            <div style="font-size: 0.8125rem; color: #1e40af; font-weight: 600;">🟠 3. Admin รอเก็บเข้าตู้</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #2563eb;" id="statWaitingAdminStore">0 งาน</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">เก็บเข้าตู้ ➔ พร้อมใช้งาน</div>
+          </div>
+        </div>
+
+        <!-- 4-Column Pipeline Kanban Board -->
+        <div class="lifecycle-pipeline-grid">
+          
+          <!-- Step 1: Admin Collection Queue -->
+          <div class="pipeline-column">
+            <div class="pipeline-header header-step1">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="step-num">1</span>
+                <h4>🔴 Admin รอรับของคืน</h4>
+              </div>
+              <span class="pipeline-count-badge" id="badgeStep1">0</span>
+            </div>
+            <div class="pipeline-body" id="colAdminCollection">
+              <!-- Cards injected here -->
+            </div>
+          </div>
+
+          <!-- Step 2: IT Maintenance & Re-imaging Queue -->
+          <div class="pipeline-column">
+            <div class="pipeline-header header-step2">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="step-num">2</span>
+                <h4>🟡 IT รอลง OS & ตรวจเช็ค</h4>
+              </div>
+              <span class="pipeline-count-badge" id="badgeStep2">0</span>
+            </div>
+            <div class="pipeline-body" id="colItReimage">
+              <!-- Cards injected here -->
+            </div>
+          </div>
+
+          <!-- Step 3: Admin Stock Storage Queue -->
+          <div class="pipeline-column">
+            <div class="pipeline-header header-step3">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="step-num">3</span>
+                <h4>🟠 Admin รอเก็บเข้าตู้สต็อก</h4>
+              </div>
+              <span class="pipeline-count-badge" id="badgeStep3">0</span>
+            </div>
+            <div class="pipeline-body" id="colAdminStore">
+              <!-- Cards injected here -->
+            </div>
+          </div>
+
+          <!-- Step 4: Onboarding Packs & Completed History -->
+          <div class="pipeline-column">
+            <div class="pipeline-header header-step4">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="step-num">✨</span>
+                <h4>📦 จัดชุดคนเข้าใหม่ & เสร็จสิ้น</h4>
+              </div>
+              <span class="pipeline-count-badge" id="badgeStep4">0</span>
+            </div>
+            <div class="pipeline-body" id="colOnboardingCompleted">
+              <!-- Cards injected here -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= USER GUIDE MODAL (HOW-TO FOR ALL EMPLOYEES) ================= -->
+  <div class="modal-overlay" id="guideModalOverlay" style="display: none;">
+    <div class="modal-card guide-modal-card">
+      <div class="modal-header">
+        <h3>📖 คู่มือการใช้งานระบบ IT Asset Hub (สำหรับพนักงาน)</h3>
+        <button class="modal-close-btn" id="guideModalCloseBtn">&times;</button>
+      </div>
+      
+      <div class="guide-modal-subnav">
+        <button class="guide-nav-btn active" data-guide-tab="gVerify">👤 1. วิธียืนยันเครื่องเดิม</button>
+        <button class="guide-nav-btn" data-guide-tab="gRegister">➕ 2. วิธีลงทะเบียนเครื่องใหม่</button>
+        <button class="guide-nav-btn" data-guide-tab="gLoan">🔄 3. วิธียืม-คืนอุปกรณ์</button>
+      </div>
+
+      <div class="modal-body guide-modal-body">
+        
+        <!-- Guide 1: Verify -->
+        <div class="guide-tab-panel active" id="gVerify">
+          <div class="guide-step-card">
+            <h4><span class="step-badge">ขั้นตอนที่ 1</span> ค้นหาชื่อพนักงานของคุณ</h4>
+            <p>พิมพ์ชื่อภาษาอังกฤษ หรือ ภาษาไทยในช่องค้นหา ระบบจะแสดงรายชื่อและจำนวนอุปกรณ์ที่ถือครองอยู่</p>
+            <div class="guide-img-container">
+              <img src="/images/01_employee_search.png" alt="ค้นหาชื่อพนักงาน" class="guide-img">
+            </div>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge">ขั้นตอนที่ 2</span> ตรวจสอบการ์ดอุปกรณ์และกดยืนยัน</h4>
+            <p>ตรวจสอบเลขทรัพย์สิน (Asset Tag) และ Serial Number บนเครื่อง หากข้อมูลถูกต้อง ให้กดปุ่ม <strong>[✅ ข้อมูลถูกต้อง]</strong> หรือกดยืนยันทั้งหมด</p>
+            <div class="guide-img-container">
+              <img src="/images/02_employee_devices.png" alt="การ์ดอุปกรณ์ประจำตัว" class="guide-img">
+            </div>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge">ขั้นตอนที่ 3</span> กรณีมีข้อมูลซ้ำ หรือไม่ได้ถือครองเครื่องนี้แล้ว</h4>
+            <p>หากพบว่ามีรายการซ้ำ (เช่น มีชื่อเครื่องรุ่นเดียวกัน 2 ตัว ทั้งที่มีเครื่องจริงแค่ตัวเดียว) ให้กดยืนยันตัวจริง 1 ตัว แล้วกดปุ่ม <strong>[✏️ แก้ไข/ติดป้าย]</strong> บนตัวที่ซ้ำ แล้วกดปุ่ม <strong>[🗑️ แจ้งเป็นข้อมูลซ้ำ]</strong> เพื่อให้ IT เคลียร์ออกจากระบบ</p>
+            <div class="guide-img-container">
+              <img src="/images/03_edit_modal.png" alt="แก้ไขและแจ้งข้อพิพาท" class="guide-img">
+            </div>
+          </div>
+        </div>
+
+        <!-- Guide 2: Register -->
+        <div class="guide-tab-panel" id="gRegister">
+          <div class="guide-step-card">
+            <h4><span class="step-badge">1</span> ค้นหาชื่อตนเองจาก Lark Directory</h4>
+            <p>พนักงานใหม่ หรือ ผู้ได้รับอุปกรณ์เพิ่ม ให้พิมพ์ชื่อตนเองในช่อง ระบบจะค้นหาบัญชี Lark องค์กรขึ้นมาให้อัตโนมัติ</p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge">2</span> กรอกเลขทรัพย์สิน & ระบบตรวจจับซ้ำ Real-time</h4>
+            <p>พิมพ์เลขทรัพย์สินบนสติกเกอร์ หากเลขซ้ำกับคนอื่น ระบบจะขึ้นแถบเตือนสีส้มทันที หรือหากไม่มีป้าย ให้ติ๊กเลือก <strong>"ไม่ทราบเลขทรัพย์สิน"</strong></p>
+            <div class="guide-img-container">
+              <img src="/images/04_new_reg_duplicate_warning.png" alt="ลงทะเบียนเครื่องใหม่และตรวจจับซ้ำ" class="guide-img">
+            </div>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge">3</span> กดบันทึกเพื่อขึ้นทะเบียน</h4>
+            <p>กดปุ่ม <strong>[🚀 บันทึกลงทะเบียน & ยืนยันเครื่องเข้าสู่ระบบ]</strong> ข้อมูลจะถูกบันทึกลง Lark Base พร้อมแสตมป์ชื่อคุณเป็นผู้ถือครองทันที</p>
+          </div>
+        </div>
+
+        <!-- Guide 3: Loan & Return -->
+        <div class="guide-tab-panel" id="gLoan">
+          <div class="guide-step-card">
+            <h4><span class="step-badge">1</span> เลือกดูคลังอุปกรณ์ว่างตามหมวดหมู่</h4>
+            <p>เลือกหมวดหมู่ เช่น โน้ตบุ๊กสำรอง, จอมอนิเตอร์, สายชาร์จ, หรือหัวแปลง จากนั้นกดปุ่ม <strong>[⚡ ขอยืมอุปกรณ์นี้]</strong></p>
+            <div class="guide-img-container">
+              <img src="/images/05_temp_loan_stock.png" alt="คลังอุปกรณ์พร้อมให้ยืม" class="guide-img">
+            </div>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge">2</span> เลือกระยะเวลายืมด่วน (1 วัน / 3 วัน / 7 วัน)</h4>
+            <p>กดปุ่มระยะเวลายืมด่วนเพื่อคำนวณวันส่งคืนอัตโนมัติ ระบุวัตถุประสงค์ แล้วกดปุ่ม <strong>[📤 ยื่นคำขอยืมอุปกรณ์ชั่วคราว]</strong></p>
+            <div class="guide-img-container">
+              <img src="/images/06_temp_loan_form.png" alt="แบบฟอร์มยืมชั่วคราว" class="guide-img">
+            </div>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge">3</span> การส่งคืนอุปกรณ์เข้าคลัง (1-Click Return)</h4>
+            <p>เมื่อนำอุปกรณ์มาคืน ให้เปิดแท็บ <em>"รายการที่กำลังยืมอยู่"</em> แล้วกดปุ่มสีเขียว <strong>[📥 ส่งคืนอุปกรณ์]</strong> เพื่ออัปเดตสต็อกเข้าคลังทันที</p>
+            <div class="guide-img-container">
+              <img src="/images/07_temp_loan_active_return.png" alt="ส่งคืนอุปกรณ์" class="guide-img">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="guideModalOkBtn">เข้าใจแล้ว ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Asset / Report Discrepancy -->
+  <div class="modal-overlay" id="editModalOverlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">✏️ แก้ไขข้อมูล / ยืนยันอุปกรณ์</h3>
+        <button class="modal-close-btn" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalRecordId">
+        <div class="modal-device-preview" id="modalDevicePreview"></div>
+
+        <div class="form-group">
+          <label for="modalUpdatedTag">เลขทรัพย์สินที่เห็นบนเครื่อง:</label>
+          <input type="text" id="modalUpdatedTag" placeholder="พิมพ์เลขทรัพย์สิน หรือเลือกไม่ทราบด้านล่าง">
+          <div class="checkbox-group">
+            <input type="checkbox" id="modalIsUnknownTag">
+            <label for="modalIsUnknownTag" class="checkbox-label">
+              🏷️ ไม่ทราบเลขทรัพย์สิน / ป้ายหลุดหาย (ให้ IT ไปติดใหม่)
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="modalNotes">หมายเหตุ / ข้อมูลเพิ่มเติม:</label>
+          <input type="text" id="modalNotes" placeholder="เช่น สภาพดี, สายชาร์จเดิม">
+        </div>
+
+        <hr class="modal-divider">
+
+        <div class="discrepancy-box">
+          <div class="discrepancy-header">
+            <strong>❌ ไม่ได้ถือครองเครื่องนี้แล้ว หรือ รายการข้อมูลซ้ำ?</strong>
+          </div>
+          <p>หากเครื่องนี้ถูกส่งคืน โอนย้าย หรือเป็นรายการข้อมูลซ้ำที่ไม่มีเครื่องจริง ให้เลือกแจ้งด้านล่าง:</p>
+          
+          <div class="duplicate-quick-action" style="margin-bottom: 12px;">
+            <button type="button" class="btn btn-danger btn-sm btn-block" id="btnReportDuplicate">
+              🗑️ แจ้งเป็นข้อมูลซ้ำในระบบ (มีเครื่องเดียวจริง ให้ IT ลบรายการนี้)
+            </button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <input type="text" id="modalDiscrepancyReason" placeholder="หรือพิมพ์เหตุผล เช่น ส่งคืนแล้ว, โอนย้าย">
+            </div>
+            <div class="form-group col-6">
+              <input type="text" id="modalDiscrepancyNewHolder" placeholder="ส่งต่อให้ใคร (ถ้าทราบ)">
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm btn-block" id="btnReportDiscrepancy" style="color: var(--danger); border-color: var(--danger-border);">
+            📤 แจ้ง IT ว่าไม่ได้ถือครองเครื่องนี้ (โอนย้าย/ส่งคืน)
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalCancelBtn">ยกเลิก</button>
+        <button class="btn btn-primary" id="modalSaveBtn">💾 บันทึกและยืนยันเครื่อง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Quick Return Device (ส่งคืนอุปกรณ์ชั่วคราว) -->
+  <div class="modal-overlay" id="returnModalOverlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📥 ส่งคืนอุปกรณ์ชั่วคราวเข้าคลัง</h3>
+        <button class="modal-close-btn" id="returnModalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="returnAssetRecordId">
+        <div class="modal-device-preview" id="returnDevicePreview"></div>
+
+        <div class="form-group">
+          <label for="returnConditionSelect">สภาพอุปกรณ์ตอนรับคืน <span class="req">*</span></label>
+          <select id="returnConditionSelect">
+            <option value="🟢 สภาพสมบูรณ์ อุปกรณ์ครบถ้วน">🟢 สภาพสมบูรณ์ อุปกรณ์ครบถ้วน</option>
+            <option value="🟡 มีรอยตำหนิ / อุปกรณ์ส่วนควบไม่ครบ">🟡 มีรอยตำหนิ / อุปกรณ์ส่วนควบไม่ครบ</option>
+            <option value="🔴 ชำรุดเสียหาย / ต้องส่งซ่อม">🔴 ชำรุดเสียหาย / ต้องส่งซ่อม</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="returnNotesInput">หมายเหตุการส่งคืน:</label>
+          <input type="text" id="returnNotesInput" placeholder="เช่น คืนสายชาร์จครบ, ใช้งานปกติ">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="returnModalCancelBtn">ยกเลิก</button>
+        <button class="btn btn-primary" id="returnModalConfirmBtn">📥 บันทึกรับคืนเข้าคลัง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: HR Offboarding Notice (แจ้งคนลาออก) -->
+  <div class="modal-overlay" id="offboardingModalOverlay" style="display: none;">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header" style="background: #fff1f2; border-bottom: 1px solid #fecdd3;">
+        <h3 style="color: #9f1239;">🚪 HR แจ้งพนักงานลาออก (Offboarding Task)</h3>
+        <button class="modal-close-btn" id="offboardingModalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="offboardingEmployeeInput">ชื่อพนักงานที่ลาออก <span class="req">*</span></label>
+          <input type="text" id="offboardingEmployeeInput" placeholder="พิมพ์ชื่อเพื่อค้นหา หรือระบุชื่อพนักงาน" list="employeeDatalist">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="offboardingOrgSelect">สังกัดบริษัท <span class="req">*</span></label>
+            <select id="offboardingOrgSelect">
+              <option value="XPO">XPO</option>
+              <option value="EDDU">EDDU</option>
+            </select>
+          </div>
+          <div class="form-group col-6">
+            <label for="offboardingLastDayInput">วัน Last Day / วันคืนของ <span class="req">*</span></label>
+            <input type="date" id="offboardingLastDayInput">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="offboardingNotesInput">หมายเหตุเพิ่มเติม (เช่น ฝากคืนใคร, เวลาคืน):</label>
+          <input type="text" id="offboardingNotesInput" placeholder="เช่น คืน 17.45 น. ฝากคืนไว้ที่หัวหน้า">
+        </div>
+
+        <div id="offboardingDevicePreview" style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 0.8125rem; margin-top: 10px;">
+          <div style="font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">📦 รายการอุปกรณ์ที่ผูกในระบบ (Auto-Checklist):</div>
+          <div id="offboardingDeviceList" style="color: #334155;">พิมพ์ชื่อพนักงานด้านบนเพื่อดึงรายการของอัตโนมัติ</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="offboardingModalCancelBtn">ยกเลิก</button>
+        <button class="btn btn-danger" id="offboardingModalSubmitBtn">🚀 ส่งเรื่องให้ Admin & IT (Create Task)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: HR Onboarding Notice (แจ้งคนเข้าใหม่) -->
+  <div class="modal-overlay" id="onboardingModalOverlay" style="display: none;">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header" style="background: #eff6ff; border-bottom: 1px solid #bfdbfe;">
+        <h3 style="color: #1e40af;">✨ HR แจ้งพนักงานเข้าใหม่ (Onboarding Pack)</h3>
+        <button class="modal-close-btn" id="onboardingModalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="onboardingPresetSelect">เลือกตำแหน่งงาน (Preset อุปกรณ์มาตรฐาน) <span class="req">*</span></label>
+          <select id="onboardingPresetSelect">
+            <option value="Marketing Project Manager">Marketing Project Manager (ThinkPad/MacBook + จอ 1 จอ + KB/Mouse + บัตรเข้าออก)</option>
+            <option value="Production">Production (Mac mini + จอ 2 จอ + HDD 1TB 2 ชิ้น + KB/Mouse + USB Port)</option>
+            <option value="Junior Graphic Designer">Junior Graphic Designer (Mac mini + จอกราฟิก 2 จอ + HDD 1TB 2 ชิ้น + KB/Mouse + USB Port)</option>
+            <option value="Sales / Account Executive">Sales / Account Executive (ThinkPad + Mouse)</option>
+            <option value="General Staff">General Staff (ThinkPad / Laptop + Mouse)</option>
+            <option value="Custom">-- กำหนดเอง (Custom Pack) --</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="onboardingEmployeeName">ชื่อพนักงานใหม่ (ถ้ามี):</label>
+            <input type="text" id="onboardingEmployeeName" placeholder="เช่น น้องพลอย, น้องต้น">
+          </div>
+          <div class="form-group col-6">
+            <label for="onboardingOrgSelect">สังกัดบริษัท <span class="req">*</span></label>
+            <select id="onboardingOrgSelect">
+              <option value="EDDU">EDDU</option>
+              <option value="XPO">XPO</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="onboardingStartDateInput">วันเริ่มงาน (Start Date) <span class="req">*</span></label>
+          <input type="date" id="onboardingStartDateInput">
+        </div>
+
+        <div class="form-group">
+          <label for="onboardingNotesInput">หมายเหตุเพิ่มเติม:</label>
+          <input type="text" id="onboardingNotesInput" placeholder="เช่น แปะโพสอิทไว้หน้าห้องบัญชี">
+        </div>
+
+        <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; border: 1px dashed #86efac; font-size: 0.8125rem;">
+          <div style="font-weight: 600; color: #166534; margin-bottom: 4px;">📋 ชุดอุปกรณ์ที่จะจัดเตรียม (Onboarding Kit):</div>
+          <div id="onboardingKitList" style="color: #14532d;">- ThinkPad / MacBook 1 เครื่อง<br/>- จอมอนิเตอร์ 1 จอ<br/>- Keyboard + Mouse 1 ชุด<br/>- บัตรเข้าออกอาคาร</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="onboardingModalCancelBtn">ยกเลิก</button>
+        <button class="btn btn-primary" id="onboardingModalSubmitBtn">🚀 ส่งเรื่องให้ Admin จัดเตรียมของ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+[
+  {
+    "id": "TASK-OFF-20260821-001",
+    "type": "offboarding",
+    "title": "คืนอุปกรณ์: น้องกระแต (Eddu) - Last Day 21 ส.ค.",
+    "employeeName": "น้องกระแต",
+    "organization": "EDDU",
+    "targetDate": "2026-08-21",
+    "notes": "คืนอุปกรณ์ 17.45 น. ฝากคืนที่หัวหน้า (พี่มิ้นท์ Eddu)",
+    "currentStage": "COMPLETED",
+    "devices": [
+      {
+        "name": "จอมอนิเตอร์ 1 จอ",
+        "tag": "ไม่ทราบ",
+        "sn": "-",
+        "status": "รอรับคืน"
+      },
+      {
+        "name": "Thinkpad",
+        "tag": "ไม่ทราบ",
+        "sn": "-",
+        "status": "รอรับคืน"
+      },
+      {
+        "name": "Keyboard + Mouse 1 Set",
+        "tag": "ไม่ทราบ",
+        "sn": "-",
+        "status": "รอรับคืน"
+      },
+      {
+        "name": "โทรศัพท์มือถือ",
+        "tag": "ไม่ทราบ",
+        "sn": "-",
+        "status": "ขอใช้คุยกับลูกค้าก่อน"
+      }
+    ],
+    "history": [
+      {
+        "stage": "CREATED",
+        "actor": "HR (คุณ Filmmy)",
+        "timestamp": "2026-08-21 10:55",
+        "note": "แจ้งพนักงานลาออก และสร้างรายการคืนของ"
+      },
+      {
+        "stage": "WAITING_IT_REIMAGE",
+        "actor": "Admin (คุณ Ploy)",
+        "timestamp": "21/8/2569 17:25:31",
+        "note": "Admin (คุณ Ploy) รับของครบแล้ว ➔ ส่งต่อให้ IT ตรวจเช็ค/ลง Windows ใหม่"
+      },
+      {
+        "stage": "WAITING_ADMIN_STORE",
+        "actor": "IT (ฝ่ายไอที)",
+        "timestamp": "21/8/2569 17:25:31",
+        "note": "IT (ฝ่ายไอที) ตรวจสภาพ + ลง OS/Windows ใหม่เสร็จแล้ว ➔ ส่งมอบให้ Admin นำไปเก็บเข้าตู้"
+      },
+      {
+        "stage": "COMPLETED",
+        "actor": "Admin (คุณ Ploy)",
+        "timestamp": "21/8/2569 17:27:50",
+        "note": "Admin (คุณ Ploy) นำเครื่องไปเก็บเข้าตู้สต็อกเรียบร้อย ➔ สถานะ: พร้อมใช้งานในคลัง (In Stock)"
+      }
+    ],
+    "createdAt": "2026-08-21T10:25:03.724Z"
+  },
+  {
+    "id": "TASK-ON-20260821-001",
+    "type": "onboarding",
+    "title": "จัดชุดอุปกรณ์: Marketing Project Manager (เริ่มงาน 1 ส.ค.)",
+    "employeeName": "Marketing Project Manager (New Joiner)",
+    "position": "Marketing Project Manager",
+    "organization": "EDDU",
+    "targetDate": "2026-08-01",
+    "notes": "แปะโพสอิทไว้หน้าห้องบัญชี",
+    "currentStage": "WAITING_ADMIN_PACK",
+    "devices": [
+      {
+        "name": "จอมอนิเตอร์ 1 จอ",
+        "tag": "รอเบิก",
+        "sn": "-",
+        "status": "รอจัดเตรียม"
+      },
+      {
+        "name": "ThinkPad หรือ MacBook 1 เครื่อง",
+        "tag": "รอเบิก",
+        "sn": "-",
+        "status": "รอจัดเตรียม"
+      },
+      {
+        "name": "Keyboard + Mouse 1 Set",
+        "tag": "รอเบิก",
+        "sn": "-",
+        "status": "รอจัดเตรียม"
+      },
+      {
+        "name": "บัตรเข้าออกอาคาร",
+        "tag": "HR/Admin",
+        "sn": "-",
+        "status": "รอจัดเตรียม"
+      }
+    ],
+    "history": [
+      {
+        "stage": "CREATED",
+        "actor": "HR (คุณ Filmmy)",
+        "timestamp": "2026-08-21 10:50",
+        "note": "แจ้งรับพนักงานใหม่ พร้อมรายการอุปกรณ์ที่ต้องใช้"
+      }
+    ],
+    "createdAt": "2026-08-21T10:25:03.724Z"
+  }
+]

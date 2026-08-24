@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  it-asset-hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: it-asset-hub
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - BASE_TOKEN=G2IgbTgmmaLnQPs3LPblGz0ngQf
+      - ADMIN_PASSWORD=itadmin2026
+      - BOT_SANDBOX_MODE=true
+      - BOT_TEST_WHITELIST=ou_454631b08ccd239365dae0b60a0f0aa7,ou_8ea6e249b0ef03ee8ee2b6a58c49e52a
+      - PORTAL_BASE_URL=http://localhost:3000
+    env_file:
+      - .env
