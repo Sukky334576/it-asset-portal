@@ -165,6 +165,15 @@ class LarkDirectApi {
     return res.json();
   }
 
+  async deleteRecord(tableId, recordId) {
+    const token = await this.getTenantAccessToken();
+    const res = await fetch(`https://open.larksuite.com/open-apis/bitable/v1/apps/${this.baseToken}/tables/${tableId}/records/${recordId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    return res.json();
+  }
+
   async batchCreateRecords(tableId, records) {
     // records: [ { fields: { ... } } ]
     const token = await this.getTenantAccessToken();
