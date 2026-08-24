@@ -24,6 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     tabContents: document.querySelectorAll('.tab-content'),
     subtabButtons: document.querySelectorAll('.subtab-btn'),
     subtabContents: document.querySelectorAll('.subtab-content'),
+    ssoGatewayScreen: document.getElementById('ssoGatewayScreen'),
+    mainAppWrapper: document.getElementById('mainAppWrapper'),
+    btnGatewayLarkLogin: document.getElementById('btnGatewayLarkLogin'),
+    btnGatewayAdminLogin: document.getElementById('btnGatewayAdminLogin'),
+
     searchPanelCard: document.getElementById('searchPanelCard'),
     lockedIdentityBanner: document.getElementById('lockedIdentityBanner'),
     lockedEmployeeName: document.getElementById('lockedEmployeeName'),
@@ -2095,17 +2100,27 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {}
 
     if (ssoUser && ssoUser.open_id) {
-      if (elements.btnHeaderLarkLogin) elements.btnHeaderLarkLogin.style.display = 'none';
+      if (elements.ssoGatewayScreen) elements.ssoGatewayScreen.style.display = 'none';
+      if (elements.mainAppWrapper) elements.mainAppWrapper.style.display = 'block';
+
       if (elements.headerUserProfile) elements.headerUserProfile.style.display = 'flex';
       if (elements.headerUserName) elements.headerUserName.textContent = ssoUser.name || ssoUser.realName || "พนักงาน";
       if (elements.headerUserAvatar && ssoUser.avatar_url) elements.headerUserAvatar.src = ssoUser.avatar_url;
 
-      if (elements.larkSsoLoginCard) elements.larkSsoLoginCard.style.display = 'none';
-      if (elements.searchPanelCard) elements.searchPanelCard.style.display = 'none';
       if (elements.lockedIdentityBanner) elements.lockedIdentityBanner.style.display = 'flex';
       if (elements.lockedEmployeeName) elements.lockedEmployeeName.textContent = ssoUser.name || ssoUser.realName;
       if (elements.lockedUserAvatarBox && ssoUser.avatar_url) {
         elements.lockedUserAvatarBox.innerHTML = `<img src="${ssoUser.avatar_url}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+      }
+
+      // Auto-fill and lock borrower / requester names
+      if (elements.regEmployeeName) {
+        elements.regEmployeeName.value = ssoUser.name || ssoUser.realName;
+        elements.regEmployeeName.readOnly = true;
+      }
+      if (elements.loanBorrowerName) {
+        elements.loanBorrowerName.value = ssoUser.name || ssoUser.realName;
+        elements.loanBorrowerName.readOnly = true;
       }
 
       // Auto select matching employee by Open ID or exact name
@@ -2122,12 +2137,13 @@ document.addEventListener('DOMContentLoaded', () => {
         selectEmployee(found);
       }
       return true;
+    } else if (state.isAdminLoggedIn) {
+      if (elements.ssoGatewayScreen) elements.ssoGatewayScreen.style.display = 'none';
+      if (elements.mainAppWrapper) elements.mainAppWrapper.style.display = 'block';
+      return true;
     } else {
-      if (elements.btnHeaderLarkLogin) elements.btnHeaderLarkLogin.style.display = 'flex';
-      if (elements.headerUserProfile) elements.headerUserProfile.style.display = 'none';
-      if (elements.larkSsoLoginCard) elements.larkSsoLoginCard.style.display = 'block';
-      if (elements.lockedIdentityBanner) elements.lockedIdentityBanner.style.display = 'none';
-      if (elements.searchPanelCard) elements.searchPanelCard.style.display = 'block';
+      if (elements.ssoGatewayScreen) elements.ssoGatewayScreen.style.display = 'flex';
+      if (elements.mainAppWrapper) elements.mainAppWrapper.style.display = 'none';
       return false;
     }
   }
@@ -2135,11 +2151,40 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleLarkSsoLogout() {
     sessionStorage.removeItem('lark_sso_user');
     localStorage.removeItem('lark_sso_user');
+    sessionStorage.removeItem('it_admin_token');
     window.location.href = '/';
   }
 
   if (elements.btnHeaderLogout) elements.btnHeaderLogout.addEventListener('click', handleLarkSsoLogout);
   if (elements.btnSsoLogout) elements.btnSsoLogout.addEventListener('click', handleLarkSsoLogout);
+
+  if (elements.btnGatewayAdminLogin) {
+    elements.btnGatewayAdminLogin.addEventListener('click', () => {
+      const pwd = prompt("🔐 กรุณากรอกรหัสผ่าน IT Admin:");
+      if (!pwd) return;
+      fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.ok && res.token) {
+          sessionStorage.setItem('it_admin_token', res.token);
+          state.isAdminLoggedIn = true;
+          if (elements.ssoGatewayScreen) elements.ssoGatewayScreen.style.display = 'none';
+          if (elements.mainAppWrapper) elements.mainAppWrapper.style.display = 'block';
+          showToast("🔑 เข้าสู่ระบบ IT Admin สำเร็จ!", "success");
+          loadAllData(true);
+          const adminTabBtn = document.querySelector('[data-tab="adminTab"]');
+          if (adminTabBtn) adminTabBtn.click();
+        } else {
+          alert("❌ รหัสผ่านไม่ถูกต้อง: " + (res.message || "กรุณาลองใหม่อีกครั้ง"));
+        }
+      })
+      .catch(err => alert("เกิดข้อผิดพลาด: " + err.message));
+    });
+  }
 
   // Magic Link URL Parameter Auto-Selection Handler
   function handleUrlParams() {
