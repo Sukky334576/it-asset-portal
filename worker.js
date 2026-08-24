@@ -25,15 +25,15 @@ function jsonResponse(data, status = 200) {
 
 function getSingleValue(val) {
   if (!val) return "";
-  if (Array.isArray(val)) return val[0] || "";
-  if (typeof val === "object" && val.text) return val.text;
+  if (Array.isArray(val)) return val[0] ? (val[0].text || val[0].name || String(val[0])) : "";
+  if (typeof val === "object" && val !== null) return val.text || val.name || "";
   return String(val);
 }
 
 function getHolderName(holder) {
   if (!holder) return "";
   if (Array.isArray(holder) && holder[0]) return holder[0].name || holder[0].id || "";
-  if (typeof holder === "object" && holder.name) return holder.name;
+  if (typeof holder === "object" && holder !== null && holder.name) return holder.name;
   return String(holder);
 }
 
@@ -41,20 +41,20 @@ function requireAdmin(request) {
   const authHeader = request.headers.get("Authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const verified = verifySignedToken(token);
-  if (!verified || verified.role !== "ADMIN") {
+  if (!verified || !verified.valid || verified.payload?.role !== "ADMIN") {
     return false;
   }
-  return verified;
+  return verified.payload;
 }
 
 function requireLifecycle(request) {
   const authHeader = request.headers.get("Authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const verified = verifySignedToken(token);
-  if (!verified || !verified.role) {
+  if (!verified || !verified.valid || !verified.payload?.role) {
     return false;
   }
-  return verified;
+  return verified.payload;
 }
 
 export default {
@@ -100,10 +100,10 @@ export default {
           let openId = "";
           let org = getSingleValue(a["Organization (สังกัด)"]) || "XPO";
 
-          if (Array.isArray(holder) && holder[0]) {
-            empName = holder[0].name || holder[0].id;
+          if (Array.isArray(holder) && holder.length > 0 && holder[0]) {
+            empName = holder[0].name || holder[0].id || "ส่วนกลาง (Unassigned / Central Stock)";
             openId = holder[0].id || "";
-          } else if (typeof holder === "object" && holder.name) {
+          } else if (holder && typeof holder === "object" && holder.name) {
             empName = holder.name;
             openId = holder.id || "";
           }

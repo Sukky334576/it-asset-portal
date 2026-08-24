@@ -49,7 +49,7 @@ function verifySignedToken(tokenStr) {
   const [b64Payload, signature] = parts;
   const expectedSig = crypto.createHmac('sha256', SECURITY_SECRET).update(b64Payload).digest('base64url');
 
-  if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+  if (signature === expectedSig) {
     try {
       const payload = JSON.parse(Buffer.from(b64Payload, 'base64url').toString('utf8'));
       if (Date.now() > payload.exp) {
