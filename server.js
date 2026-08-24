@@ -417,10 +417,17 @@ app.get('/api/assets', async (req, res) => {
     }
 });
 
+app.set('trust proxy', 1);
+
 // ---------------- LARK OAUTH SSO ROUTES ---------------- //
 
 app.get('/auth/lark', (req, res) => {
-    const origin = `${req.protocol}://${req.get('host')}`;
+    let proto = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host') || "";
+    if (host.includes('trycloudflare.com') || host.includes('workers.dev') || req.secure) {
+        proto = 'https';
+    }
+    const origin = `${proto}://${host}`;
     const redirectUri = `${origin}/auth/callback`;
     const appId = process.env.LARK_APP_ID || "cli_aa9a88a6e7f89ed2";
     const authUrl = `https://open.larksuite.com/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=lark_sso`;
