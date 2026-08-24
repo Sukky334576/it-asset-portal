@@ -298,30 +298,129 @@ export default {
         return jsonResponse({ ok: true, message: "บันทึกผลการยืนยันข้อมูลเรียบร้อยแล้ว!" });
       }
 
+      // 3. Duplicate check endpoint
+      if (pathname === "/api/check-duplicate" && method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const { assetTag, serialNumber, excludeRecordId } = body;
+        const assets = await lark.fetchRecords(TABLE_MASTER);
+
+        let tagConflict = null;
+        let snConflict = null;
+
+        const cleanTag = (assetTag || "").trim();
+        const cleanSN = (serialNumber || "").trim();
+
+        if (cleanTag && cleanTag !== "ไม่ทราบ" && cleanTag !== "---") {
+          const found = assets.find(a => {
+            if (excludeRecordId && a.record_id === excludeRecordId) return false;
+            const existingTag = (a["Asset Tag (เลขทรัพย์สิน)"] || "").trim();
+            return existingTag.toLowerCase() === cleanTag.toLowerCase();
+          });
+          if (found) {
+            tagConflict = {
+              record_id: found.record_id,
+              assetTag: found["Asset Tag (เลขทรัพย์สิน)"],
+              deviceName: found["Device Name (ชื่อรุ่น/อุปกรณ์)"],
+              holder: getHolderName(found["Current Holder (ผู้ถือครองปัจจุบัน)"]),
+              organization: getSingleValue(found["Organization (สังกัด)"])
+            };
+          }
+        }
+
+        if (cleanSN && cleanSN !== "---" && cleanSN.toLowerCase() !== "null") {
+          const found = assets.find(a => {
+            if (excludeRecordId && a.record_id === excludeRecordId) return false;
+            const existingSN = (a["Serial Number (S/N)"] || "").trim();
+            return existingSN.toLowerCase() === cleanSN.toLowerCase();
+          });
+          if (found) {
+            snConflict = {
+              record_id: found.record_id,
+              serialNumber: found["Serial Number (S/N)"],
+              deviceName: found["Device Name (ชื่อรุ่น/อุปกรณ์)"],
+              holder: getHolderName(found["Current Holder (ผู้ถือครองปัจจุบัน)"]),
+              organization: getSingleValue(found["Organization (สังกัด)"])
+            };
+          }
+        }
+
+        return jsonResponse({
+          ok: true,
+          hasConflict: !!(tagConflict || snConflict),
+          tagConflict,
+          snConflict
+        });
+      }
+
       // Register New Asset
       if (pathname === "/api/register" && method === "POST") {
         const body = await request.json().catch(() => ({}));
-        const { brand, deviceName, deviceType, organization, serialNumber, assetTag, missingTag, holderName, notes } = body;
+        const {
+          employeeName,
+          holderName,
+          employeeId,
+          organization,
+          deviceType,
+          brand,
+          deviceName,
+          assetTag,
+          isUnknownTag,
+          missingTag,
+          serialNumber,
+          isUnknownSN,
+          condition,
+          notes
+        } = body;
+
+        const effectiveEmpName = employeeName || holderName || "พนักงาน";
+        const isMissTag = Boolean(isUnknownTag || missingTag || !assetTag || assetTag === "ไม่ทราบ");
+        const isMissSN = Boolean(isUnknownSN || !serialNumber || serialNumber === "---");
+
+        const tag = isMissTag ? "ไม่ทราบ" : (assetTag || "ไม่ทราบ").trim();
+        const sn = isMissSN ? "-" : (serialNumber || "").trim();
+
+        const auditStatus = isMissTag
+          ? "🏷️ ต้องติดป้ายเลขทรัพย์สินใหม่ (Missing Tag)"
+          : "🟢 ยืนยันแล้ว (Verified)";
+
+        const combinedNotes = [
+          effectiveEmpName ? `ผู้ถือครอง: ${effectiveEmpName}` : "",
+          notes ? `หมายเหตุ: ${notes}` : "",
+          condition ? `สภาพ: ${condition}` : ""
+        ].filter(Boolean).join(" | ");
 
         const newRec = {
           "Brand (ยี่ห้อ)": brand || "Other",
-          "Device Name (ชื่อรุ่น/อุปกรณ์)": deviceName || "IT Asset",
+          "Device Name (ชื่อรุ่น/อุปกรณ์)": deviceName || `${brand || ""} ${deviceType || "อุปกรณ์ IT"}`.trim(),
           "Device Type (ประเภทอุปกรณ์)": deviceType || "Laptop (NB)",
           "Organization (สังกัด)": organization || "XPO",
-          "Serial Number (S/N)": serialNumber || "-",
-          "Asset Tag (เลขทรัพย์สิน)": missingTag ? "ไม่ทราบ" : (assetTag || "ไม่ทราบ"),
-          "Missing Tag? (ไม่มีเลขทรัพย์สิน)": Boolean(missingTag),
+          "Serial Number (S/N)": sn,
+          "Asset Tag (เลขทรัพย์สิน)": tag,
+          "Missing Tag? (ไม่มีเลขทรัพย์สิน)": isMissTag,
+          "Missing Serial? (ไม่มี S/N)": isMissSN,
           "Status (สถานะอุปกรณ์)": "🟢 ใช้งานประจำตัว (In Use)",
-          "Audit Status (สถานะการยืนยัน)": missingTag ? "🏷️ ต้องติดป้ายเลขทรัพย์สินใหม่ (Missing Tag)" : "🟢 ยืนยันแล้ว (Verified)",
-          "Specs / Notes (รายละเอียด/หมายเหตุ)": sanitizeString(notes, 500)
+          "Audit Status (สถานะการยืนยัน)": auditStatus,
+          "Specs / Notes (รายละเอียด/หมายเหตุ)": combinedNotes || "ลงทะเบียนใหม่ผ่าน Web Portal"
         };
 
-        if (holderName) {
-          newRec["Current Holder (ผู้ถือครองปัจจุบัน)"] = [{ name: holderName }];
+        if (employeeId && String(employeeId).startsWith("ou_")) {
+          newRec["Current Holder (ผู้ถือครองปัจจุบัน)"] = [{ id: employeeId }];
         }
 
-        await lark.createRecord(TABLE_MASTER, newRec);
-        return jsonResponse({ ok: true, message: "ลงทะเบียนอุปกรณ์ใหม่เข้าระบบเรียบร้อยแล้ว!" });
+        const created = await lark.createRecord(TABLE_MASTER, newRec);
+
+        // Audit Log Entry
+        await lark.createRecord(TABLE_AUDIT, {
+          "Brand & Model (ยี่ห้อและรุ่น)": `${newRec["Brand (ยี่ห้อ)"]} ${newRec["Device Name (ชื่อรุ่น/อุปกรณ์)"]}`,
+          "IT Review Status (ผลการตรวจสอบโดย IT)": auditStatus,
+          "Notes (หมายเหตุจากพนักงาน)": `ลงทะเบียนใหม่โดย ${effectiveEmpName}: ${combinedNotes}`
+        }).catch(() => null);
+
+        return jsonResponse({
+          ok: true,
+          message: "🎉 ลงทะเบียนอุปกรณ์ใหม่เข้าระบบเรียบร้อยแล้ว!",
+          record: created
+        });
       }
 
       // ---------------- TEMPORARY LOANS ---------------- //

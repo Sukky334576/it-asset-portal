@@ -1132,9 +1132,15 @@ document.addEventListener('DOMContentLoaded', () => {
     submitBtn.disabled = true;
     submitBtn.textContent = "กำลังบันทึกและส่งข้อมูลเข้า Lark Base...";
 
+    let ssoOpenId = elements.regEmployeeId.value || undefined;
+    try {
+      const ssoUser = JSON.parse(sessionStorage.getItem('lark_sso_user') || localStorage.getItem('lark_sso_user') || '{}');
+      if (ssoUser && ssoUser.open_id) ssoOpenId = ssoUser.open_id;
+    } catch(e) {}
+
     const payload = {
       employeeName: elements.regEmployeeName.value.trim(),
-      employeeId: elements.regEmployeeId.value || undefined,
+      employeeId: ssoOpenId,
       organization: elements.regOrg.value,
       deviceType: elements.regDeviceType.value,
       brand: elements.regBrand.value,
@@ -1162,6 +1168,8 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.regSerial.disabled = false;
         elements.duplicateAlertBanner.style.display = 'none';
         await loadAllData(true);
+        const verifyBtn = document.querySelector('[data-tab="verifyTab"]');
+        if (verifyBtn) verifyBtn.click();
       } else {
         showToast("เกิดข้อผิดพลาด: " + res.message, "error");
       }
