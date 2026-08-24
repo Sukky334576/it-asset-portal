@@ -43,7 +43,10 @@ document.addEventListener('DOMContentLoaded', () => {
     guideTabPanels: document.querySelectorAll('.guide-tab-panel'),
     helpPills: document.querySelectorAll('.btn-help-pill'),
 
-    // Countdown
+    // Countdown & Banner
+    bannerBadge: document.getElementById('bannerBadge'),
+    bannerText: document.getElementById('bannerText'),
+    cdLabel: document.getElementById('cdLabel'),
     cdDays: document.getElementById('cdDays'),
     cdHours: document.getElementById('cdHours'),
     cdMins: document.getElementById('cdMins'),
@@ -321,28 +324,58 @@ document.addEventListener('DOMContentLoaded', () => {
     return d.toISOString().split('T')[0];
   }
 
-  // ---------------- COUNTDOWN TIMER ---------------- //
+  // ---------------- COUNTDOWN TIMER (28 ส.ค. – 4 ก.ย. 2026) ---------------- //
   function startCountdown() {
-    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).getTime();
-    function update() {
-      const now = new Date().getTime();
-      const distance = endDate - now;
-      if (distance < 0) {
-        elements.cdDays.textContent = "00";
-        elements.cdHours.textContent = "00";
-        elements.cdMins.textContent = "00";
-        elements.cdSecs.textContent = "00";
-        return;
-      }
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    // Campaign Schedule: Friday 28 Aug 2026 09:00 AM to Friday 4 Sep 2026 18:00 PM
+    const startCampaignTime = new Date('2026-08-28T09:00:00+07:00').getTime();
+    const endCampaignTime = new Date('2026-09-04T18:00:00+07:00').getTime();
 
-      elements.cdDays.textContent = String(days).padStart(2, '0');
-      elements.cdHours.textContent = String(hours).padStart(2, '0');
-      elements.cdMins.textContent = String(minutes).padStart(2, '0');
-      elements.cdSecs.textContent = String(seconds).padStart(2, '0');
+    function update() {
+      const now = Date.now();
+
+      if (now < startCampaignTime) {
+        // Pre-Campaign Stage (กำลังจะเริ่มศุกร์นี้)
+        const distance = startCampaignTime - now;
+        if (elements.cdLabel) elements.cdLabel.textContent = "เริ่มในอีก:";
+        if (elements.bannerBadge) elements.bannerBadge.textContent = "⏳ UPCOMING 7-DAY FREEZE";
+        if (elements.bannerText) elements.bannerText.innerHTML = `แคมเปญยืนยันถือครองอุปกรณ์ IT ประจำตัว <strong>(เริ่มศุกร์ที่ 28 ส.ค. 09:00 น. – 4 ก.ย. 18:00 น.)</strong>`;
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        if (elements.cdDays) elements.cdDays.textContent = String(days).padStart(2, '0');
+        if (elements.cdHours) elements.cdHours.textContent = String(hours).padStart(2, '0');
+        if (elements.cdMins) elements.cdMins.textContent = String(minutes).padStart(2, '0');
+        if (elements.cdSecs) elements.cdSecs.textContent = String(seconds).padStart(2, '0');
+      } else if (now <= endCampaignTime) {
+        // Active Campaign Stage (ช่วงแคมเปญ 7 วัน)
+        const distance = endCampaignTime - now;
+        if (elements.cdLabel) elements.cdLabel.textContent = "สิ้นสุดใน:";
+        if (elements.bannerBadge) elements.bannerBadge.textContent = "🚨 FREEZE PERIOD 7 วัน";
+        if (elements.bannerText) elements.bannerText.innerHTML = `แคมเปญยืนยันถือครองอุปกรณ์ IT ประจำตัว (28 ส.ค. – 4 ก.ย. 2026) — <strong>ห้ามสลับหรือส่งต่อเครื่องระหว่างช่วงเวลานี้</strong>`;
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        if (elements.cdDays) elements.cdDays.textContent = String(days).padStart(2, '0');
+        if (elements.cdHours) elements.cdHours.textContent = String(hours).padStart(2, '0');
+        if (elements.cdMins) elements.cdMins.textContent = String(minutes).padStart(2, '0');
+        if (elements.cdSecs) elements.cdSecs.textContent = String(seconds).padStart(2, '0');
+      } else {
+        // Post-Campaign Stage (สิ้นสุดแล้ว)
+        if (elements.cdLabel) elements.cdLabel.textContent = "สถานะ:";
+        if (elements.bannerBadge) elements.bannerBadge.textContent = "✅ สิ้นสุดแคมเปญ";
+        if (elements.bannerText) elements.bannerText.innerHTML = `สิ้นสุดช่วง 7-Day Freeze Campaign เรียบร้อยแล้ว — ขอบคุณพนักงานทุกท่านที่ให้ความร่วมมือครับ 🙏`;
+
+        if (elements.cdDays) elements.cdDays.textContent = "00";
+        if (elements.cdHours) elements.cdHours.textContent = "00";
+        if (elements.cdMins) elements.cdMins.textContent = "00";
+        if (elements.cdSecs) elements.cdSecs.textContent = "00";
+      }
     }
     update();
     setInterval(update, 1000);
