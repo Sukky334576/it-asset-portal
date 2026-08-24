@@ -98,26 +98,48 @@ export default {
           const holder = a["Current Holder (ผู้ถือครองปัจจุบัน)"];
           let empName = "ส่วนกลาง (Unassigned / Central Stock)";
           let openId = "";
+          let email = "";
           let org = getSingleValue(a["Organization (สังกัด)"]) || "XPO";
 
           if (Array.isArray(holder) && holder.length > 0 && holder[0]) {
-            empName = holder[0].name || holder[0].id || "ส่วนกลาง (Unassigned / Central Stock)";
             openId = holder[0].id || "";
-          } else if (holder && typeof holder === "object" && holder.name) {
-            empName = holder.name;
+            email = holder[0].email || "";
+            empName = holder[0].en_name || holder[0].name || holder[0].id || "ส่วนกลาง (Unassigned / Central Stock)";
+          } else if (holder && typeof holder === "object") {
             openId = holder.id || "";
+            email = holder.email || "";
+            empName = holder.en_name || holder.name || holder.id || "ส่วนกลาง (Unassigned / Central Stock)";
+          }
+
+          if (openId === "ou_b1756acc400b9e0d575cbe53ff5480dc" || empName.toLowerCase().includes("teeraphat")) {
+            empName = "Tle.Teeraphat";
           }
 
           if (!employeeMap[empName]) {
+            const isResigned = empName.includes("(ลาออก)") || empName.includes("Closed") || resignedNames.includes(empName);
             employeeMap[empName] = {
               id: openId,
               name: empName,
+              email: email,
               organization: org,
-              isResigned: empName.includes("(ลาออก)") || empName.includes("Closed") || resignedNames.includes(empName),
-              devices: []
+              isResigned: isResigned,
+              accountStatus: isResigned ? "CLOSED" : "ACTIVE",
+              devices: [],
+              allVerified: true,
+              pendingCount: 0,
+              verifiedCount: 0
             };
           }
           employeeMap[empName].devices.push(a);
+
+          const auditStatus = getSingleValue(a["Audit Status (สถานะการยืนยัน)"]);
+          const isVerified = auditStatus && auditStatus.includes("ยืนยันแล้ว");
+          if (isVerified) {
+            employeeMap[empName].verifiedCount++;
+          } else {
+            employeeMap[empName].pendingCount++;
+            employeeMap[empName].allVerified = false;
+          }
         });
 
         const list = Object.values(employeeMap).sort((a, b) => a.name.localeCompare(b.name));
@@ -262,6 +284,8 @@ export default {
         let availableCount = 0;
         let orgStats = { XPO: { total: 0, verified: 0 }, EDDU: { total: 0, verified: 0 }, Other: { total: 0, verified: 0 } };
         let unconfirmed = new Set();
+        let missingTagList = [];
+        let disputedList = [];
 
         assets.forEach(a => {
           const status = getSingleValue(a["Status (สถานะอุปกรณ์)"]);
@@ -275,8 +299,9 @@ export default {
           if (auditStatus.includes("ยืนยันแล้ว")) {
             verifiedCount++;
             orgStats[orgKey].verified++;
-          } else if (auditStatus.includes("ขัดแย้ง")) {
+          } else if (auditStatus.includes("ขัดแย้ง") || auditStatus.includes("Disputed")) {
             disputeCount++;
+            disputedList.push(a);
           } else {
             pendingCount++;
             if (holder && !holder.includes("ส่วนกลาง")) unconfirmed.add(holder);
@@ -285,7 +310,11 @@ export default {
           if (status.includes("ยืม") || status.includes("On Loan")) onLoanCount++;
           else if (status.includes("พร้อมใช้งาน") || status.includes("Available")) availableCount++;
 
-          if (a["Missing Tag? (ไม่มีเลขทรัพย์สิน)"]) missingTagCount++;
+          const missingTag = a["Missing Tag? (ไม่มีเลขทรัพย์สิน)"] || (a["Asset Tag (เลขทรัพย์สิน)"] === "ไม่ทราบ");
+          if (missingTag) {
+            missingTagCount++;
+            missingTagList.push(a);
+          }
         });
 
         return jsonResponse({
@@ -301,7 +330,11 @@ export default {
           xpoPercent: orgStats.XPO.total > 0 ? Math.round((orgStats.XPO.verified / orgStats.XPO.total) * 100) : 0,
           edduPercent: orgStats.EDDU.total > 0 ? Math.round((orgStats.EDDU.verified / orgStats.EDDU.total) * 100) : 0,
           orgStats,
-          unconfirmedEmployees: Array.from(unconfirmed)
+          unconfirmedEmployees: Array.from(unconfirmed),
+          missingTagList: missingTagList.slice(0, 50),
+          disputedList,
+          botSandboxMode: true,
+          botWhitelist: ["ou_454631b08ccd239365dae0b60a0f0aa7", "ou_8ea6e249b0ef03ee8ee2b6a58c49e52a", "ou_ddbd83ad4f843334774fcde57c094c32", "ou_71ae4aeeb5a23ef5345a32d4ff946b53"]
         });
       }
 

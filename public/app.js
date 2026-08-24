@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ---------------- TAB 1: EMPLOYEE VERIFICATION ---------------- //
+  // ---------------- TAB 1: EMPLOYEE SEARCH & VERIFICATION ---------------- //
 
   // Autocomplete search
   elements.employeeSearchInput.addEventListener('input', (e) => {
@@ -631,8 +631,13 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const qClean = query.replace(/[.\s_-]/g, '');
     const filtered = state.employees.filter(emp => {
-      const matchName = emp.name.toLowerCase().includes(query);
+      const empClean = emp.name.toLowerCase().replace(/[.\s_-]/g, '');
+      const matchName = emp.name.toLowerCase().includes(query) || 
+                        empClean.includes(qClean) || 
+                        (emp.email && emp.email.toLowerCase().includes(query)) ||
+                        (emp.id && emp.id.toLowerCase().includes(query));
       const matchOrg = state.orgFilter === 'ALL' 
         ? true 
         : (state.orgFilter === 'RESIGNED' ? emp.isResigned : emp.organization.includes(state.orgFilter));
@@ -1425,11 +1430,12 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.edduProgressBar.style.width = `${s.edduPercent}%`;
 
     // Missing Tag Worklist
-    elements.missingTagBadgeCount.textContent = `${s.missingTagList.length} รายการ`;
-    if (s.missingTagList.length === 0) {
+    const missingList = s.missingTagList || [];
+    elements.missingTagBadgeCount.textContent = `${missingList.length} รายการ`;
+    if (missingList.length === 0) {
       elements.missingTagTbody.innerHTML = `<tr><td colspan="6" class="text-center">ไม่มีรายการที่ต้องติดป้ายใหม่</td></tr>`;
     } else {
-      elements.missingTagTbody.innerHTML = s.missingTagList.map(item => {
+      elements.missingTagTbody.innerHTML = missingList.map(item => {
         const holder = item["Current Holder (ผู้ถือครองปัจจุบัน)"];
         let holderName = "ไม่ระบุ";
         if (Array.isArray(holder) && holder[0]) holderName = holder[0].name || holder[0].id;
