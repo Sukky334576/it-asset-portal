@@ -37,6 +37,59 @@ class LarkDirectApi {
     return this.cachedToken;
   }
 
+  async getAppAccessToken() {
+    const res = await fetch("https://open.larksuite.com/open-apis/auth/v3/app_access_token/internal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        app_id: this.appId,
+        app_secret: this.appSecret
+      })
+    });
+    const data = await res.json();
+    if (data.code !== 0) {
+      throw new Error(`Lark App Auth Error: ${data.msg} (code ${data.code})`);
+    }
+    return data.app_access_token;
+  }
+
+  async exchangeOAuthCode(code) {
+    const appToken = await this.getAppAccessToken();
+    const res = await fetch("https://open.larksuite.com/open-apis/authen/v1/access_token", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${appToken}`,
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify({
+        grant_type: "authorization_code",
+        code: code
+      })
+    });
+    const data = await res.json();
+    if (data.code !== 0) {
+      // Try OIDC endpoint if v1 returned non-zero
+      try {
+        const oidcRes = await fetch("https://open.larksuite.com/open-apis/authen/v1/oidc/access_token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grant_type: "authorization_code",
+            client_id: this.appId,
+            client_secret: this.appSecret,
+            code: code
+          })
+        });
+        const oidcData = await oidcRes.json();
+        if (oidcData.code === 0 && oidcData.data) {
+          return oidcData.data;
+        }
+      } catch (e) {}
+      throw new Error(`OAuth Code Exchange Error: ${data.msg} (code ${data.code})`);
+    }
+    return data.data;
+  }
+
   async fetchRecords(tableId, pageSize = 500) {
     const token = await this.getTenantAccessToken();
     let allRecords = [];

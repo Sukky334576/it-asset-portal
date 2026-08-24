@@ -27,6 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
     searchPanelCard: document.getElementById('searchPanelCard'),
     lockedIdentityBanner: document.getElementById('lockedIdentityBanner'),
     lockedEmployeeName: document.getElementById('lockedEmployeeName'),
+    lockedUserAvatarBox: document.getElementById('lockedUserAvatarBox'),
+    btnSsoLogout: document.getElementById('btnSsoLogout'),
+    larkSsoLoginCard: document.getElementById('larkSsoLoginCard'),
+
+    // Lark SSO Header Elements
+    btnHeaderLarkLogin: document.getElementById('btnHeaderLarkLogin'),
+    headerUserProfile: document.getElementById('headerUserProfile'),
+    headerUserAvatar: document.getElementById('headerUserAvatar'),
+    headerUserName: document.getElementById('headerUserName'),
+    btnHeaderLogout: document.getElementById('btnHeaderLogout'),
 
     // Badges & Sync
     syncText: document.getElementById('syncText'),
@@ -576,6 +586,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const found = state.employees.find(e => e.name === state.selectedEmployee.name);
         if (found) selectEmployee(found);
       }
+
+      checkLarkSsoAuth();
 
       elements.syncText.textContent = `ซิงก์กับ Lark Base เรียบร้อย (${state.assets.length} รายการ)`;
     } catch (err) {
@@ -2073,6 +2085,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ---------------- LARK SSO AUTHENTICATION HANDLER ---------------- //
+
+  function checkLarkSsoAuth() {
+    let ssoUser = null;
+    try {
+      const raw = sessionStorage.getItem('lark_sso_user') || localStorage.getItem('lark_sso_user');
+      if (raw) ssoUser = JSON.parse(raw);
+    } catch (e) {}
+
+    if (ssoUser && ssoUser.open_id) {
+      if (elements.btnHeaderLarkLogin) elements.btnHeaderLarkLogin.style.display = 'none';
+      if (elements.headerUserProfile) elements.headerUserProfile.style.display = 'flex';
+      if (elements.headerUserName) elements.headerUserName.textContent = ssoUser.name || ssoUser.realName || "พนักงาน";
+      if (elements.headerUserAvatar && ssoUser.avatar_url) elements.headerUserAvatar.src = ssoUser.avatar_url;
+
+      if (elements.larkSsoLoginCard) elements.larkSsoLoginCard.style.display = 'none';
+      if (elements.searchPanelCard) elements.searchPanelCard.style.display = 'none';
+      if (elements.lockedIdentityBanner) elements.lockedIdentityBanner.style.display = 'flex';
+      if (elements.lockedEmployeeName) elements.lockedEmployeeName.textContent = ssoUser.name || ssoUser.realName;
+      if (elements.lockedUserAvatarBox && ssoUser.avatar_url) {
+        elements.lockedUserAvatarBox.innerHTML = `<img src="${ssoUser.avatar_url}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+      }
+
+      // Auto select matching employee by Open ID or exact name
+      const targetOpenId = ssoUser.open_id;
+      const targetName = (ssoUser.name || ssoUser.realName || "").toLowerCase();
+
+      const found = state.employees.find(e => {
+        if (targetOpenId && e.id === targetOpenId) return true;
+        const eLower = e.name.toLowerCase();
+        return eLower === targetName || (ssoUser.email && e.email && e.email.toLowerCase() === ssoUser.email.toLowerCase());
+      });
+
+      if (found) {
+        selectEmployee(found);
+      }
+      return true;
+    } else {
+      if (elements.btnHeaderLarkLogin) elements.btnHeaderLarkLogin.style.display = 'flex';
+      if (elements.headerUserProfile) elements.headerUserProfile.style.display = 'none';
+      if (elements.larkSsoLoginCard) elements.larkSsoLoginCard.style.display = 'block';
+      if (elements.lockedIdentityBanner) elements.lockedIdentityBanner.style.display = 'none';
+      if (elements.searchPanelCard) elements.searchPanelCard.style.display = 'block';
+      return false;
+    }
+  }
+
+  function handleLarkSsoLogout() {
+    sessionStorage.removeItem('lark_sso_user');
+    localStorage.removeItem('lark_sso_user');
+    window.location.href = '/';
+  }
+
+  if (elements.btnHeaderLogout) elements.btnHeaderLogout.addEventListener('click', handleLarkSsoLogout);
+  if (elements.btnSsoLogout) elements.btnSsoLogout.addEventListener('click', handleLarkSsoLogout);
+
   // Magic Link URL Parameter Auto-Selection Handler
   function handleUrlParams() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -2080,15 +2148,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabParam = urlParams.get('tab');
     const tokenParam = urlParams.get('token');
     const modeParam = urlParams.get('mode');
+    const ssoSuccess = urlParams.get('sso');
 
-    const isLocked = modeParam === 'locked' || Boolean(tokenParam);
+    if (ssoSuccess === 'success') {
+      showToast("🎉 เข้าสู่ระบบด้วยบัญชี Lark สำเร็จ!", "success");
+      // Clean query params from URL without refreshing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const hasSso = checkLarkSsoAuth();
 
     if (tabParam) {
       const targetTabBtn = document.querySelector(`[data-tab="${tabParam}"]`);
       if (targetTabBtn) targetTabBtn.click();
     }
 
-    if (empParam) {
+    if (!hasSso && empParam) {
       setTimeout(() => {
         elements.employeeSearchInput.value = empParam;
         const cleanParam = empParam.toLowerCase().trim();
@@ -2098,7 +2173,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (found) {
           selectEmployee(found);
+          const isLocked = modeParam === 'locked' || Boolean(tokenParam);
           if (isLocked) {
+            if (elements.larkSsoLoginCard) elements.larkSsoLoginCard.style.display = 'none';
             if (elements.searchPanelCard) elements.searchPanelCard.style.display = 'none';
             if (elements.lockedIdentityBanner) elements.lockedIdentityBanner.style.display = 'flex';
             if (elements.lockedEmployeeName) elements.lockedEmployeeName.textContent = found.name;

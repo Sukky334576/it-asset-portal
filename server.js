@@ -41,6 +41,14 @@ const TABLE_AUDIT = "tblzKjtJuoAifQKS";
 const TABLE_LOAN = "tblwL0cJzvv1qsj3";
 const LARK_CLI_PATH = "/Users/xpo/Library/Application Support/Antigravity/bin/lark-cli";
 
+// Lark Direct REST API Client
+const LarkDirectApi = require('./services/larkDirectApi');
+const larkDirect = new LarkDirectApi(
+    process.env.LARK_APP_ID || "cli_aa9a88a6e7f89ed2",
+    process.env.LARK_APP_SECRET || "qmzk77vbQMpFtUP66JRr1ebJPyqHooD5",
+    BASE_TOKEN
+);
+
 // Admin Security Password / PIN
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "itadmin2026";
 
@@ -81,6 +89,29 @@ async function fetchMasterAssets(force = false) {
         return cachedAssets;
     }
 
+    try {
+        const records = await larkDirect.fetchRecords(TABLE_MASTER);
+        if (records && records.length > 0) {
+            records.forEach(rec => {
+                const holder = rec["Current Holder (ผู้ถือครองปัจจุบัน)"];
+                if (Array.isArray(holder) && holder.length > 0) {
+                    holder.forEach(u => {
+                        if (u && u.id && (u.name || u.en_name)) {
+                            const name = u.en_name || u.name;
+                            userDirectoryCache.set(name.toLowerCase().trim(), { id: u.id, name: name });
+                            userDirectoryCache.set(u.id, { id: u.id, name: name });
+                        }
+                    });
+                }
+            });
+            cachedAssets = records;
+            lastFetchTime = now;
+            return cachedAssets;
+        }
+    } catch (apiErr) {
+        console.warn("Direct API fetchMasterAssets error, trying CLI fallback:", apiErr.message);
+    }
+
     let allRecords = [];
     let offset = 0;
     const limit = 100;
@@ -117,9 +148,10 @@ async function fetchMasterAssets(force = false) {
             const holder = rec["Current Holder (ผู้ถือครองปัจจุบัน)"];
             if (Array.isArray(holder) && holder.length > 0) {
                 holder.forEach(u => {
-                    if (u && u.id && u.name) {
-                        userDirectoryCache.set(u.name.toLowerCase().trim(), { id: u.id, name: u.name });
-                        userDirectoryCache.set(u.id, { id: u.id, name: u.name });
+                    if (u && u.id && (u.name || u.en_name)) {
+                        const name = u.en_name || u.name;
+                        userDirectoryCache.set(name.toLowerCase().trim(), { id: u.id, name: name });
+                        userDirectoryCache.set(u.id, { id: u.id, name: name });
                     }
                 });
             }
@@ -143,6 +175,17 @@ async function fetchLoanRecords(force = false) {
     const now = Date.now();
     if (!force && cachedLoans.length > 0 && (now - lastLoanFetchTime) < CACHE_TTL_MS) {
         return cachedLoans;
+    }
+
+    try {
+        const records = await larkDirect.fetchRecords(TABLE_LOAN);
+        if (records && records.length > 0) {
+            cachedLoans = records;
+            lastLoanFetchTime = now;
+            return cachedLoans;
+        }
+    } catch (apiErr) {
+        console.warn("Direct API fetchLoanRecords error, trying CLI fallback:", apiErr.message);
     }
 
     let allLoans = [];
@@ -187,9 +230,11 @@ async function fetchLoanRecords(force = false) {
 function getHolderName(userField) {
     if (!userField) return "ส่วนกลาง / ไม่ระบุผู้ถือครอง";
     if (Array.isArray(userField) && userField.length > 0) {
-        return userField[0].name || userField[0].id || "พนักงาน";
+        return userField[0].en_name || userField[0].name || userField[0].id || "พนักงาน";
     }
-    if (typeof userField === 'object' && userField.name) return userField.name;
+    if (typeof userField === 'object' && userField !== null) {
+        return userField.en_name || userField.name || userField.id || "พนักงาน";
+    }
     return String(userField);
 }
 
@@ -265,10 +310,10 @@ async function getEmployeeDeviceList() {
         let empName = "";
         let empId = "";
         if (Array.isArray(holder) && holder[0]) {
-            empName = holder[0].name || holder[0].id;
+            empName = holder[0].en_name || holder[0].name || holder[0].id;
             empId = holder[0].id;
-        } else if (typeof holder === 'object') {
-            empName = holder.name || holder.id;
+        } else if (typeof holder === 'object' && holder !== null) {
+            empName = holder.en_name || holder.name || holder.id;
             empId = holder.id;
         } else {
             empName = String(holder);
@@ -367,6 +412,140 @@ app.get('/api/assets', async (req, res) => {
         const force = req.query.refresh === 'true';
         const assets = await fetchMasterAssets(force);
         res.json({ ok: true, total: assets.length, data: assets });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// ---------------- LARK OAUTH SSO ROUTES ---------------- //
+
+app.get('/auth/lark', (req, res) => {
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const redirectUri = `${origin}/auth/callback`;
+    const appId = process.env.LARK_APP_ID || "cli_aa9a88a6e7f89ed2";
+    const authUrl = `https://open.larksuite.com/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=lark_sso`;
+    
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.json({ ok: true, url: authUrl });
+    }
+    res.redirect(authUrl);
+});
+
+app.get('/auth/callback', async (req, res) => {
+    const code = req.query.code;
+    if (!code) {
+        return res.status(400).send("Missing authorization code");
+    }
+
+    try {
+        const authData = await larkDirect.exchangeOAuthCode(code);
+        const openId = authData.open_id || "";
+        const name = authData.name || "";
+        const enName = authData.en_name || name;
+        const email = authData.email || "";
+        const avatarUrl = authData.avatar_url || authData.avatar_thumb || "";
+
+        const token = generateSignedToken({ open_id: openId, name: enName, role: "EMPLOYEE" }, 72);
+
+        const userSession = JSON.stringify({
+            open_id: openId,
+            name: enName,
+            realName: name,
+            email: email,
+            avatar_url: avatarUrl,
+            token: token
+        });
+
+        const html = `<!DOCTYPE html>
+        <html>
+        <head>
+          <title>Lark SSO Authenticated</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; }
+            .card { background: #1e293b; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); text-align: center; max-width: 420px; border: 1px solid #334155; }
+            .avatar { width: 72px; height: 72px; border-radius: 50%; border: 3px solid #3b82f6; margin: 0 auto 1rem; object-fit: cover; }
+            .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #38bdf8; border-radius: 50%; width: 32px; height: 32px; animation: spin 0.8s linear infinite; margin: 1.5rem auto 0.5rem; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            ${avatarUrl ? `<img class="avatar" src="${avatarUrl}" alt="Avatar">` : `<div style="font-size:3rem; margin-bottom:0.5rem;">👤</div>`}
+            <h2 style="margin:0 0 0.5rem; font-size:1.4rem;">🔐 เข้าสู่ระบบสำเร็จ!</h2>
+            <p style="margin:0; font-size:1.1rem; color:#38bdf8; font-weight:600;">${enName}</p>
+            ${email ? `<p style="margin:0.25rem 0 0; font-size:0.875rem; color:#94a3b8;">${email}</p>` : ''}
+            <div class="spinner"></div>
+            <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.5rem;">กำลังพาเข้าสู่ระบบ IT Asset Hub...</p>
+          </div>
+          <script>
+            try {
+              const userObj = ${userSession};
+              sessionStorage.setItem('lark_sso_user', JSON.stringify(userObj));
+              localStorage.setItem('lark_sso_user', JSON.stringify(userObj));
+              setTimeout(() => { window.location.replace('/?sso=success'); }, 800);
+            } catch(e) {
+              window.location.replace('/?sso=success');
+            }
+          </script>
+        </body>
+        </html>`;
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+    } catch (err) {
+        res.status(500).send(`OAuth Error: ${err.message}`);
+    }
+});
+
+// Authenticated User's Devices
+app.get('/api/me/devices', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || "";
+        const token = authHeader.replace(/^Bearer\s+/i, "");
+        const verified = verifySignedToken(token);
+
+        let targetOpenId = req.query.open_id || "";
+        let targetName = req.query.name || "";
+
+        if (verified && verified.valid && verified.payload) {
+            if (verified.payload.open_id) targetOpenId = verified.payload.open_id;
+            if (verified.payload.name) targetName = verified.payload.name;
+        }
+
+        if (!targetOpenId && !targetName) {
+            return res.status(401).json({ ok: false, message: "Authentication required" });
+        }
+
+        const assets = await fetchMasterAssets();
+        const myDevices = assets.filter(a => {
+            const holder = a["Current Holder (ผู้ถือครองปัจจุบัน)"];
+            if (!holder) return false;
+            if (Array.isArray(holder) && holder.length > 0) {
+                return holder.some(u => {
+                    if (targetOpenId && u.id === targetOpenId) return true;
+                    const uName = (u.en_name || u.name || "").toLowerCase();
+                    const tName = targetName.toLowerCase();
+                    return uName && tName && (uName === tName || uName.includes(tName) || tName.includes(uName));
+                });
+            }
+            if (typeof holder === "object") {
+                if (targetOpenId && holder.id === targetOpenId) return true;
+                const uName = (holder.en_name || holder.name || "").toLowerCase();
+                const tName = targetName.toLowerCase();
+                return uName && tName && (uName === tName || uName.includes(tName) || tName.includes(uName));
+            }
+            return false;
+        });
+
+        res.json({
+            ok: true,
+            openId: targetOpenId,
+            name: targetName,
+            total: myDevices.length,
+            data: myDevices
+        });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
