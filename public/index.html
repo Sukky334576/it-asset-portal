@@ -557,9 +557,14 @@
             <h2>📊 IT Admin Control Center & Freeze Campaign Monitor</h2>
             <p>ติดตามความคืบหน้าการยืนยันข้อมูลอุปกรณ์ 7 วัน รายชื่อพนักงานที่ยังไม่ยืนยัน และรายการที่ต้องติดป้ายบาร์โค้ดใหม่</p>
           </div>
-          <button class="btn btn-danger btn-sm" id="btnAdminLogout">
-            🚪 ออกจากระบบ Admin
-          </button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-secondary btn-sm btn-help-pill" data-guide-target="guideITAdmin" style="font-weight: 600;">
+              📖 คู่มือ IT Admin
+            </button>
+            <button class="btn btn-danger btn-sm" id="btnAdminLogout">
+              🚪 ออกจากระบบ Admin
+            </button>
+          </div>
         </div>
 
         <!-- KPI Metrics Cards -->
@@ -924,6 +929,9 @@
               <p style="font-size: 0.8125rem; color: var(--text-muted); margin: 0;">ระบบบริหารจัดการคนเข้า-คนออก และวงจรชีวิตอุปกรณ์ IT แบบ 4 สเต็ป เพื่อให้ทุกฝ่ายทำงานสอดประสานกัน ไร้รอยต่อ</p>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn btn-secondary btn-sm btn-help-pill" data-guide-target="guideHR" style="font-weight: 600;">
+                📖 คู่มือ 3 ฝ่าย (HR/Admin/IT)
+              </button>
               <div style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 0.8125rem; display: flex; align-items: center; gap: 6px;">
                 <span id="lifecycleActiveRoleBadge">👔 HR Mode</span>
               </div>
@@ -1038,59 +1046,62 @@
 
   </main>
 
-  <!-- ================= USER GUIDE MODAL (HOW-TO FOR ALL EMPLOYEES) ================= -->
+  <!-- ================= USER GUIDE MODAL (COMPREHENSIVE MULTI-ROLE MANUAL) ================= -->
   <div class="modal-overlay" id="guideModalOverlay" style="display: none;">
-    <div class="modal-card guide-modal-card">
+    <div class="modal-card guide-modal-card" style="max-width: 900px; width: 95%;">
       <div class="modal-header">
-        <h3>📖 คู่มือการใช้งานระบบ IT Asset Hub (สำหรับพนักงาน)</h3>
+        <h3>📖 คู่มือการใช้งานระบบ IT Asset Management Hub (สำหรับทุกบทบาท)</h3>
         <button class="modal-close-btn" id="guideModalCloseBtn">&times;</button>
       </div>
       
       <div class="guide-modal-subnav">
-        <button class="guide-nav-btn active" data-guide-tab="gVerify">👤 1. วิธียืนยันเครื่องเดิม</button>
-        <button class="guide-nav-btn" data-guide-tab="gRegister">➕ 2. วิธีลงทะเบียนเครื่องใหม่</button>
-        <button class="guide-nav-btn" data-guide-tab="gLoan">🔄 3. วิธียืม-คืนอุปกรณ์</button>
+        <button class="guide-nav-btn active" data-guide-tab="gVerify">👤 1. พนักงาน: ยืนยันเครื่อง (SSO)</button>
+        <button class="guide-nav-btn" data-guide-tab="gRegister">➕ 2. พนักงาน: ลงทะเบียนเครื่องใหม่</button>
+        <button class="guide-nav-btn" data-guide-tab="gLoan">🔄 3. พนักงาน: ยืม-คืนอุปกรณ์</button>
+        <button class="guide-nav-btn" data-guide-tab="gITAdmin" style="color: #2563eb; font-weight: 700;">📊 4. คู่มือ IT Admin</button>
+        <button class="guide-nav-btn" data-guide-tab="gOpsAdmin" style="color: #059669; font-weight: 700;">📦 5. คู่มือ Admin ธุรการ</button>
+        <button class="guide-nav-btn" data-guide-tab="gHR" style="color: #4f46e5; font-weight: 700;">👥 6. คู่มือฝ่ายบุคคล HR</button>
       </div>
 
       <div class="modal-body guide-modal-body">
         
-        <!-- Guide 1: Verify -->
+        <!-- Guide 1: Verify (Employee) -->
         <div class="guide-tab-panel active" id="gVerify">
           <div class="guide-step-card">
-            <h4><span class="step-badge">ขั้นตอนที่ 1</span> ค้นหาชื่อพนักงานของคุณ</h4>
-            <p>พิมพ์ชื่อภาษาอังกฤษ หรือ ภาษาไทยในช่องค้นหา ระบบจะแสดงรายชื่อและจำนวนอุปกรณ์ที่ถือครองอยู่</p>
-            <div class="guide-img-container">
-              <img src="/images/01_employee_search.png" alt="ค้นหาชื่อพนักงาน" class="guide-img">
-            </div>
+            <h4><span class="step-badge">ขั้นตอนที่ 1</span> เข้าสู่ระบบยืนยันตัวตนด้วยบัญชี Lark (1-Click SSO)</h4>
+            <p>เมื่อเปิดเข้ามาที่หน้าแรก ให้กดปุ่ม <strong>[🚀 เข้าสู่ระบบด้วย Lark (Login with Lark)]</strong> เพื่อเข้าใช้งานอย่างปลอดภัย ข้อมูลของคุณจะถูกดึงตรงจาก Lark OpenID โดยไม่มีการสับสนชื่อหรือปะปนกับเพื่อนร่วมงาน</p>
           </div>
 
           <div class="guide-step-card">
-            <h4><span class="step-badge">ขั้นตอนที่ 2</span> ตรวจสอบการ์ดอุปกรณ์และกดยืนยัน</h4>
-            <p>ตรวจสอบเลขทรัพย์สิน (Asset Tag) และ Serial Number บนเครื่อง หากข้อมูลถูกต้อง ให้กดปุ่ม <strong>[✅ ข้อมูลถูกต้อง]</strong> หรือกดยืนยันทั้งหมด</p>
+            <h4><span class="step-badge">ขั้นตอนที่ 2</span> ตรวจสอบการ์ดอุปกรณ์ประจำตัวคุณ</h4>
+            <p>ระบบจะแสดงการ์ดอุปกรณ์คอมพิวเตอร์ จอมอนิเตอร์ และอุปกรณ์เสริมที่บันทึกไว้ภายใต้ชื่อของคุณ ตรวจสอบเลขทรัพย์สิน (Asset Tag) บนสติกเกอร์ และเลข Serial Number (S/N) ใต้เครื่อง</p>
             <div class="guide-img-container">
               <img src="/images/02_employee_devices.png" alt="การ์ดอุปกรณ์ประจำตัว" class="guide-img">
             </div>
           </div>
 
           <div class="guide-step-card">
-            <h4><span class="step-badge">ขั้นตอนที่ 3</span> กรณีมีข้อมูลซ้ำ หรือไม่ได้ถือครองเครื่องนี้แล้ว</h4>
-            <p>หากพบว่ามีรายการซ้ำ (เช่น มีชื่อเครื่องรุ่นเดียวกัน 2 ตัว ทั้งที่มีเครื่องจริงแค่ตัวเดียว) ให้กดยืนยันตัวจริง 1 ตัว แล้วกดปุ่ม <strong>[✏️ แก้ไข/ติดป้าย]</strong> บนตัวที่ซ้ำ แล้วกดปุ่ม <strong>[🗑️ แจ้งเป็นข้อมูลซ้ำ]</strong> เพื่อให้ IT เคลียร์ออกจากระบบ</p>
+            <h4><span class="step-badge">ขั้นตอนที่ 3</span> กดยืนยันข้อมูล หรือ แจ้งข้อมูลซ้ำ / ขอติดป้ายใหม่</h4>
+            <p>
+              • <strong>หากข้อมูลถูกต้อง</strong>: กดปุ่มสีเขียว <strong>[✅ ข้อมูลถูกต้อง]</strong> บนแต่ละการ์ด หรือกด <strong>[✅ ยืนยันอุปกรณ์ทั้งหมดของฉัน]</strong><br>
+              • <strong>หากมีรายการซ้ำ หรือเครื่องส่งต่อให้คนอื่นแล้ว</strong>: กดยืนยันเครื่องจริง 1 เครื่อง จากนั้นกดปุ่ม <strong>[✏️ แก้ไข/ย้าย]</strong> บนเครื่องที่ซ้ำ แล้วเลือก <strong>[🗑️ แจ้งเป็นข้อมูลซ้ำ]</strong> หรือ <strong>[🏷️ ป้ายสติกเกอร์หลุดหาย]</strong> เพื่อส่งเรื่องให้ IT ตรวจสอบทันที
+            </p>
             <div class="guide-img-container">
               <img src="/images/03_edit_modal.png" alt="แก้ไขและแจ้งข้อพิพาท" class="guide-img">
             </div>
           </div>
         </div>
 
-        <!-- Guide 2: Register -->
+        <!-- Guide 2: Register (Employee) -->
         <div class="guide-tab-panel" id="gRegister">
           <div class="guide-step-card">
-            <h4><span class="step-badge">1</span> ค้นหาชื่อตนเองจาก Lark Directory</h4>
-            <p>พนักงานใหม่ หรือ ผู้ได้รับอุปกรณ์เพิ่ม ให้พิมพ์ชื่อตนเองในช่อง ระบบจะค้นหาบัญชี Lark องค์กรขึ้นมาให้อัตโนมัติ</p>
+            <h4><span class="step-badge">1</span> ระบบล็อกชื่อผู้ถือครองเป็นชื่อคุณอัตโนมัติ</h4>
+            <p>เมื่อคุณล็อกอินผ่าน Lark SSO ระบบจะดึงชื่อบัญชีและสังกัดบริษัท (XPO หรือ EDDU) ของคุณเป็นผู้ถือครองเครื่องใหม่ให้อัตโนมัติ ป้องกันการกรอกชื่อผิด</p>
           </div>
 
           <div class="guide-step-card">
             <h4><span class="step-badge">2</span> กรอกเลขทรัพย์สิน & ระบบตรวจจับซ้ำ Real-time</h4>
-            <p>พิมพ์เลขทรัพย์สินบนสติกเกอร์ หากเลขซ้ำกับคนอื่น ระบบจะขึ้นแถบเตือนสีส้มทันที หรือหากไม่มีป้าย ให้ติ๊กเลือก <strong>"ไม่ทราบเลขทรัพย์สิน"</strong></p>
+            <p>พิมพ์เลขทรัพย์สิน (เช่น COM-00123) และ Serial Number โดยระบบมี <strong>Real-time Duplicate Detection</strong> หากมีใครเคยลงทะเบียนเลขนี้ไว้แล้ว ระบบจะขึ้นกล่องเตือนสีส้มทันที หรือหากไม่มีสติกเกอร์ ให้ติ๊กเลือก <strong>"ไม่ทราบเลขทรัพย์สิน (รอ IT ติดป้าย)"</strong></p>
             <div class="guide-img-container">
               <img src="/images/04_new_reg_duplicate_warning.png" alt="ลงทะเบียนเครื่องใหม่และตรวจจับซ้ำ" class="guide-img">
             </div>
@@ -1098,11 +1109,11 @@
 
           <div class="guide-step-card">
             <h4><span class="step-badge">3</span> กดบันทึกเพื่อขึ้นทะเบียน</h4>
-            <p>กดปุ่ม <strong>[🚀 บันทึกลงทะเบียน & ยืนยันเครื่องเข้าสู่ระบบ]</strong> ข้อมูลจะถูกบันทึกลง Lark Base พร้อมแสตมป์ชื่อคุณเป็นผู้ถือครองทันที</p>
+            <p>กดปุ่ม <strong>[🚀 บันทึกลงทะเบียน & ยืนยันเครื่องเข้าสู่ระบบ]</strong> ข้อมูลจะถูกบันทึกลง Lark Base Master ทันที และระบบจะพาคุณกลับมาที่แท็บ 1 เพื่อแสดงการ์ดเครื่องใหม่ที่คุณเพิ่งลงทะเบียน</p>
           </div>
         </div>
 
-        <!-- Guide 3: Loan & Return -->
+        <!-- Guide 3: Loan & Return (Employee) -->
         <div class="guide-tab-panel" id="gLoan">
           <div class="guide-step-card">
             <h4><span class="step-badge">1</span> เลือกดูคลังอุปกรณ์ว่างตามหมวดหมู่</h4>
@@ -1114,7 +1125,7 @@
 
           <div class="guide-step-card">
             <h4><span class="step-badge">2</span> เลือกระยะเวลายืมด่วน (1 วัน / 3 วัน / 7 วัน)</h4>
-            <p>กดปุ่มระยะเวลายืมด่วนเพื่อคำนวณวันส่งคืนอัตโนมัติ ระบุวัตถุประสงค์ แล้วกดปุ่ม <strong>[📤 ยื่นคำขอยืมอุปกรณ์ชั่วคราว]</strong></p>
+            <p>กดปุ่มระยะเวลายืมด่วนเพื่อคำนวณวันส่งคืนอัตโนมัติ ระบุวัตถุประสงค์การยืม แล้วกดปุ่ม <strong>[📤 ยื่นคำขอยืมอุปกรณ์ชั่วคราว]</strong></p>
             <div class="guide-img-container">
               <img src="/images/06_temp_loan_form.png" alt="แบบฟอร์มยืมชั่วคราว" class="guide-img">
             </div>
@@ -1122,10 +1133,92 @@
 
           <div class="guide-step-card">
             <h4><span class="step-badge">3</span> การส่งคืนอุปกรณ์เข้าคลัง (1-Click Return)</h4>
-            <p>เมื่อนำอุปกรณ์มาคืน ให้เปิดแท็บ <em>"รายการที่กำลังยืมอยู่"</em> แล้วกดปุ่มสีเขียว <strong>[📥 ส่งคืนอุปกรณ์]</strong> เพื่ออัปเดตสต็อกเข้าคลังทันที</p>
+            <p>เมื่อนำอุปกรณ์มาคืนที่โต๊ะเจ้าหน้าที่ ให้เปิดแท็บ <em>"รายการที่กำลังยืมอยู่"</em> แล้วกดปุ่มสีเขียว <strong>[📥 ส่งคืนอุปกรณ์]</strong> เพื่ออัปเดตสถานะเป็นพร้อมใช้งานในสต็อกทันที</p>
             <div class="guide-img-container">
               <img src="/images/07_temp_loan_active_return.png" alt="ส่งคืนอุปกรณ์" class="guide-img">
             </div>
+          </div>
+        </div>
+
+        <!-- Guide 4: IT Admin Manual -->
+        <div class="guide-tab-panel" id="gITAdmin">
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#2563eb;">IT Admin 1</span> การเข้าสู่ระบบ IT Admin Dashboard</h4>
+            <p>กดปุ่ม <strong>[🔑 สำหรับเจ้าหน้าที่ IT Admin & HR]</strong> ที่หน้าแรก หรือเลือกแท็บ 4 แล้วกรอกรหัสผ่านแอดมิน: <code>itadmin2026</code> เพื่อเปิดแดชบอร์ดบริหารจัดการ</p>
+            <div class="guide-img-container">
+              <img src="/images/09_admin_dashboard.png" alt="IT Admin Dashboard" class="guide-img">
+            </div>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#2563eb;">IT Admin 2</span> ตรวจสอบความคืบหน้าแคมเปญ 7-Day Freeze</h4>
+            <p>ดูกราฟสถิติภาพรวมแยกตามสังกัด XPO และ EDDU, ตรวจสอบรายชื่อพนักงานที่ยังไม่ยืนยัน (Pending List) และรายการที่ป้ายสติกเกอร์สูญหาย (Missing Tag Requests) เพื่อจัดคิวพิมพ์ป้ายบาร์โค้ดใหม่</p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#2563eb;">IT Admin 3</span> ระบบล้างข้อมูลซ้ำอัจฉริยะ (Smart Duplicate Cleaner)</h4>
+            <p>ระบบจะตรวจจับ Serial Number ที่ซ้ำกันและเคสที่พนักงานกดแจ้งซ้ำ IT สามารถกดปุ่ม <strong>[⚡ ล้างรายการซ้ำที่เข้าเงื่อนไขทั้งหมดอัตโนมัติ (Safe Auto-Clean)]</strong> เพื่อลบ Record ที่ซ้ำออกอย่างปลอดภัย โดยมีประวัติบันทึกใน Audit Logs เสมอ</p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#2563eb;">IT Admin 4</span> การดึงเครื่องคนลาออกเข้าคลังกลาง (Resigned Auto-Reclaim)</h4>
+            <p>ในหัวข้อ <em>"พนักงานที่ลาออก / Closed Account"</em> IT สามารถกดปุ่ม <strong>[📥 ดึงอุปกรณ์ทั้งหมดกลับเข้าคลังกลาง (Reclaim to Stock)]</strong> ระบบจะปลดชื่อผู้ถือครองเดิม และเปลี่ยนสถานะเครื่องเป็น Available in Stock ทันที</p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#2563eb;">IT Admin 5</span> ศูนย์ควบคุม Lark Bot Notification & Batch Scheduler</h4>
+            <p>สั่งรันบอทยิงการ์ดแจ้งเตือนแบบ 1-on-1 เข้าแชท Lark ของพนักงานที่ยังไม่ได้ยืนยันตัวตน หรือทดสอบส่งการ์ดหาพนักงานเฉพาะบุคคลเพื่อตรวจเช็ค UX ได้ทันที</p>
+          </div>
+        </div>
+
+        <!-- Guide 5: Operations / Admin Manual -->
+        <div class="guide-tab-panel" id="gOpsAdmin">
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#059669;">Admin ธุรการ 1</span> บริหารจัดการคลังอุปกรณ์กลาง (Central IT Stock)</h4>
+            <p>เข้าใช้งานแท็บ 3 เพื่อตรวจสอบจำนวนอุปกรณ์พร้อมใช้งาน (Available), อุปกรณ์ที่อยู่ระหว่างยืม (On Loan) และตรวจรับอุปกรณ์ที่พนักงานนำมาคืน</p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#059669;">Admin ธุรการ 2</span> การรับมอบเครื่องกายภาพจากพนักงานลาออก (Step 2 ในแท็บ 5)</h4>
+            <p>เมื่อฝ่ายบุคคล (HR) ส่งตั๋วพนักงานลาออกเข้ามา ในวันสุดท้ายของการทำงาน พนักงานจะนำเครื่องและอุปกรณ์เสริมมาส่งมอบ ให้ Admin ตรวจนับอุปกรณ์ให้ครบตามรายการในใบงาน แล้วกดปุ่ม <strong>[📦 Admin รับเครื่องจริงแล้ว ➔ ส่งต่อ IT ตรวจสภาพ]</strong></p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#059669;">Admin ธุรการ 3</span> การจัดเตรียมชุด Onboarding Kit ต้อนรับพนักงานใหม่ (Step 4 ในแท็บ 5)</h4>
+            <p>เมื่อ IT ทำการ Reimage และตรวจเช็คสุขภาพเครื่องเสร็จ Admin นำเครื่องมาจัดใส่กล่องชุด Kit ร่วมกับบัตรผ่านอาคาร คีย์บอร์ด และเมาส์ จากนั้นกดปุ่ม <strong>[✅ Admin จัดชุด Kit เรียบร้อย ➔ พร้อมเริ่มงาน]</strong></p>
+          </div>
+        </div>
+
+        <!-- Guide 6: HR Lifecycle Manual -->
+        <div class="guide-tab-panel" id="gHR">
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#4f46e5;">HR ฝ่ายบุคคล 1</span> การเข้าสู่ระบบส่งต่องาน 3 ฝ่าย (Lifecycle Hub)</h4>
+            <p>เลือกแท็บ <strong>5. ส่งต่องาน 3 ฝ่าย (HR/Admin/IT Hub)</strong> จากนั้นกรอกรหัสผ่านฝ่ายบุคคล: <code>lifecycle2026</code> เพื่อเปิดหน้าจัดการการเข้า-ออกของพนักงาน</p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#4f46e5;">HR ฝ่ายบุคคล 2</span> การเปิดตั๋วพนักงานลาออก (Offboarding Request)</h4>
+            <p>
+              1. กดปุ่มสีแดง <strong>[➕ แจ้งพนักงานลาออก (Offboarding)]</strong><br>
+              2. เลือกชื่อพนักงานที่กำลังจะลาออก ➔ ระบบจะดึงรายการคอมพิวเตอร์และอุปกรณ์ทั้งหมดที่พนักงานคนนั้นถือครองอยู่มาลงในตารางให้ทันที<br>
+              3. ระบุวันทำงานวันสุดท้าย (Last Working Day) และหมายเหตุ<br>
+              4. กดปุ่ม <strong>[🚀 ส่งเรื่องให้ Admin ธุรการรอดักรับของ]</strong>
+            </p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#4f46e5;">HR ฝ่ายบุคคล 3</span> การเปิดตั๋วพนักงานใหม่ (Onboarding Request)</h4>
+            <p>
+              1. กดปุ่มสีเขียว <strong>[➕ แจ้งพนักงานเริ่มงานใหม่ (Onboarding)]</strong><br>
+              2. กรอกชื่อพนักงานใหม่, เลือกสังกัดบริษัท (XPO หรือ EDDU), และเลือกแพ็กเกจอุปกรณ์ (เช่น Standard Kit: โน้ตบุ๊ก + จอ + เมาส์ + บัตร)<br>
+              3. ระบุวันเริ่มงาน (Start Date)<br>
+              4. กดปุ่ม <strong>[🚀 ส่งเรื่องให้ Admin จัดเตรียมของ]</strong> เพื่อให้ทีมงานจัดเตรียมเครื่องล่วงหน้าก่อนเริ่มงานอย่างน้อย 3 วัน
+            </p>
+          </div>
+
+          <div class="guide-step-card">
+            <h4><span class="step-badge" style="background:#4f46e5;">HR ฝ่ายบุคคล 4</span> การติดตามสถานะความคืบหน้า 3 ฝ่ายแบบ Real-time</h4>
+            <p>HR สามารถดูสถานะของตั๋วทุกใบได้แบบ Real-time ว่าขณะนี้ของอยู่ที่ใคร (Admin กำลังดักรับของ ➔ IT กำลัง Reimage เครื่อง ➔ Admin เก็บเข้าตู้สต็อก) ป้องกันปัญหาเครื่องสูญหายหรือตามคืนไม่ได้ 100%</p>
           </div>
         </div>
 

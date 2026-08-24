@@ -297,6 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
       let tabKey = 'gVerify';
       if (targetGuide === 'guideRegister') tabKey = 'gRegister';
       if (targetGuide === 'guideLoan') tabKey = 'gLoan';
+      if (targetGuide === 'guideITAdmin') tabKey = 'gITAdmin';
+      if (targetGuide === 'guideOpsAdmin') tabKey = 'gOpsAdmin';
+      if (targetGuide === 'guideHR') tabKey = 'gHR';
       openGuideModal(tabKey);
     });
   });
