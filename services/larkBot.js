@@ -115,7 +115,7 @@ function createVerificationCard(employeeName, devices = [], employeeId = '') {
         elements: [
           {
             tag: "plain_text",
-            content: "💡 หากข้อมูลถูกต้อง สามารถกดปุ่ม 'กดยืนยันในแชท' ได้ทันที หรือกดเปิดเว็บหากต้องการแจ้งสลับเครื่อง/ป้ายหาย"
+            content: "💡 กรุณากดปุ่มด้านล่างเพื่อเข้าสู่ระบบพอร์ทัล ตรวจสอบความถูกต้องของเลขทรัพย์สิน (Asset Tag) และ Serial Number หรือแจ้งแก้ไขข้อมูล"
           }
         ]
       },
@@ -126,22 +126,9 @@ function createVerificationCard(employeeName, devices = [], employeeId = '') {
             tag: "button",
             text: {
               tag: "plain_text",
-              content: "✅ กดยืนยันทั้งหมดทันที (ในแชท)"
+              content: "🔍 เข้าสู่ระบบเพื่อตรวจสอบและยืนยันเครื่อง (เปิดบนเว็บ)"
             },
             type: "primary",
-            value: {
-              action_type: "confirm_all_devices",
-              employee_name: employeeName,
-              record_ids: recordIds
-            }
-          },
-          {
-            tag: "button",
-            text: {
-              tag: "plain_text",
-              content: "🌐 เปิดดูรายละเอียดเต็มบนเว็บ"
-            },
-            type: "default",
             url: magicUrl
           }
         ]
