@@ -2,14 +2,16 @@
 
 Enterprise IT Asset Management, Verification Campaign (7-Day Freeze Policy), and 3-Way Lifecycle Offboarding & Onboarding Hub for **XPO** and **EDDU** organizations, seamlessly synchronized with **Lark Base** and **Lark Bot Notifications**.
 
+> 📖 **Developer Handover & System Architecture**: Please refer to [SYSTEM_ARCH_AND_TRICKS.md](file:///Users/xpo/Downloads/CSM%20Part/it-asset-portal/SYSTEM_ARCH_AND_TRICKS.md) for full configuration, API tokens, Gotchas, and tips.
+
 ---
 
 ## 🌟 Key Features
 
-### 1. 🔍 Self-Service Asset Verification (โหมดตรวจสอบและยืนยันทรัพย์สิน)
-- Real-time search across Lark Base Master Inventory with intelligent name aliasing.
+### 1. 🔐 Strict Lark OAuth 2.0 SSO Gateway & Self-Service Verification
+- **Gatekeeper Login**: Unauthenticated visitors only see the Lark SSO Gateway. Zero employee name or asset list is leaked publicly.
+- **Exact OpenID Isolation**: Logging in via Lark SSO retrieves only devices belonging strictly to the employee's `open_id`, preventing any name collision or substring mismatch.
 - 1-Click device verification with audit notes and discrepancy reporting.
-- **Locked Identity View**: When accessed via Lark Bot Magic Link (`?emp=...&mode=locked`), employee identity is locked to prevent unauthorized viewing or editing of colleagues' devices.
 
 ### 2. ➕ New Asset Registration & Tag Replacement (ลงทะเบียนเครื่องใหม่ / ขอติดป้าย)
 - Direct registration of unrecorded devices into Master Base.
