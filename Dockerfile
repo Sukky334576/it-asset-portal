@@ -23,6 +23,8 @@ COPY package*.json ./
 COPY server.js ./
 COPY services/ ./services/
 COPY routes/ ./routes/
+COPY middleware/ ./middleware/
+COPY data/ ./data/
 COPY public/ ./public/
 
 # Expose port
