@@ -400,22 +400,58 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------- AUTHENTICATED FETCH HELPERS ---------------- //
-  function adminFetch(url, options = {}) {
+  async function adminFetch(url, options = {}) {
     const token = sessionStorage.getItem('it_admin_token') || '';
+    if (!token) {
+      return { ok: false, status: 401, json: async () => ({ ok: false, code: 'UNAUTHORIZED' }) };
+    }
     const headers = {
       ...(options.headers || {}),
       'Authorization': `Bearer ${token}`
     };
-    return fetch(url, { ...options, headers });
+    try {
+      const res = await fetch(url, { ...options, headers });
+      return {
+        ok: res.ok,
+        status: res.status,
+        json: async () => {
+          try {
+            return await res.json();
+          } catch (e) {
+            return { ok: false, message: 'Invalid response from server' };
+          }
+        }
+      };
+    } catch (err) {
+      return { ok: false, status: 500, json: async () => ({ ok: false, message: err.message }) };
+    }
   }
 
-  function lifecycleFetch(url, options = {}) {
+  async function lifecycleFetch(url, options = {}) {
     const token = sessionStorage.getItem('lifecycle_auth_token') || '';
+    if (!token) {
+      return { ok: false, status: 401, json: async () => ({ ok: false, code: 'UNAUTHORIZED' }) };
+    }
     const headers = {
       ...(options.headers || {}),
       'Authorization': `Bearer ${token}`
     };
-    return fetch(url, { ...options, headers });
+    try {
+      const res = await fetch(url, { ...options, headers });
+      return {
+        ok: res.ok,
+        status: res.status,
+        json: async () => {
+          try {
+            return await res.json();
+          } catch (e) {
+            return { ok: false, message: 'Invalid response from server' };
+          }
+        }
+      };
+    } catch (err) {
+      return { ok: false, status: 500, json: async () => ({ ok: false, message: err.message }) };
+    }
   }
 
   // ---------------- ADMIN AUTHENTICATION ---------------- //

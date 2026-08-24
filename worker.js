@@ -733,6 +733,200 @@ export default {
         return jsonResponse({ ok: true, message: `ดึงอุปกรณ์ของ ${employeeName} ทั้งหมด ${targets.length} รายการเข้าคลังเรียบร้อย!` });
       }
 
+      // Handover detection (Resigned to Active)
+      if (pathname === "/api/admin/resigned/handovers" && method === "GET") {
+        if (!requireAdmin(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED" }, 401);
+        const assets = await lark.fetchRecords(TABLE_MASTER);
+        let resignedNames = [];
+        if (env.IT_ASSET_KV) {
+          const kvData = await env.IT_ASSET_KV.get("resigned_staff");
+          if (kvData) resignedNames = JSON.parse(kvData);
+        }
+
+        const employeeMap = {};
+        assets.forEach(a => {
+          const holder = getHolderName(a["Current Holder (ผู้ถือครองปัจจุบัน)"]);
+          if (!holder || holder.includes("ส่วนกลาง")) return;
+          if (!employeeMap[holder]) {
+            const isRes = holder.includes("(ลาออก)") || holder.includes("Closed") || resignedNames.includes(holder);
+            employeeMap[holder] = {
+              name: holder,
+              organization: getSingleValue(a["Organization (สังกัด)"]) || "XPO",
+              isResigned: isRes,
+              devices: []
+            };
+          }
+          employeeMap[holder].devices.push(a);
+        });
+
+        const resignedEmployees = Object.values(employeeMap).filter(e => e.isResigned);
+        const activeEmployees = Object.values(employeeMap).filter(e => !e.isResigned);
+
+        const handovers = [];
+        const seenHandoverKeys = new Set();
+
+        resignedEmployees.forEach(rEmp => {
+          rEmp.devices.forEach(rDev => {
+            const rSn = (rDev["Serial Number (S/N)"] || "").trim().toLowerCase();
+            const rTag = (rDev["Asset Tag (เลขทรัพย์สิน)"] || "").trim().toLowerCase();
+
+            activeEmployees.forEach(aEmp => {
+              aEmp.devices.forEach(aDev => {
+                const aSn = (aDev["Serial Number (S/N)"] || "").trim().toLowerCase();
+                const aTag = (aDev["Asset Tag (เลขทรัพย์สิน)"] || "").trim().toLowerCase();
+
+                const matchSn = rSn && rSn !== "---" && rSn !== "none" && rSn !== "-" && rSn === aSn;
+                const matchTag = rTag && rTag !== "ไม่ทราบ" && rTag !== "-" && rTag !== "none" && rTag === aTag;
+
+                if (matchSn || matchTag) {
+                  const key = `${rDev.record_id}_${aDev.record_id}`;
+                  if (!seenHandoverKeys.has(key)) {
+                    seenHandoverKeys.add(key);
+                    handovers.push({
+                      matchType: matchSn ? "Serial Number" : "Asset Tag",
+                      matchedValue: matchSn ? rDev["Serial Number (S/N)"] : rDev["Asset Tag (เลขทรัพย์สิน)"],
+                      deviceName: aDev["Device Name (ชื่อรุ่น/อุปกรณ์)"] || rDev["Device Name (ชื่อรุ่น/อุปกรณ์)"] || "IT Asset",
+                      deviceType: getSingleValue(aDev["Device Type (ประเภทอุปกรณ์)"] || rDev["Device Type (ประเภทอุปกรณ์)"]) || "Device",
+                      resignedEmp: rEmp.name,
+                      resignedRecordId: rDev.record_id,
+                      activeEmp: aEmp.name,
+                      activeOrg: aEmp.organization,
+                      activeRecordId: aDev.record_id,
+                      activeAuditStatus: getSingleValue(aDev["Audit Status (สถานะการยืนยัน)"]) || "รอตรวจสอบ"
+                    });
+                  }
+                }
+              });
+            });
+          });
+        });
+
+        return jsonResponse({
+          ok: true,
+          handoverCount: handovers.length,
+          handovers: handovers
+        });
+      }
+
+      // Resolve Handover
+      if (pathname === "/api/admin/resigned/resolve-handovers" && method === "POST") {
+        if (!requireAdmin(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED" }, 401);
+        const { handoversToResolve } = await request.json().catch(() => ({}));
+        if (!handoversToResolve || handoversToResolve.length === 0) {
+          return jsonResponse({ ok: false, message: "ไม่มีรายการที่เลือกสำหรับอนุมัติการส่งต่อ" }, 400);
+        }
+
+        const resignedIdsToDelete = handoversToResolve.map(h => h.resignedRecordId);
+        await lark.batchDeleteRecords(TABLE_MASTER, resignedIdsToDelete);
+
+        for (const h of handoversToResolve) {
+          await lark.updateRecord(TABLE_MASTER, h.activeRecordId, {
+            "Audit Status (สถานะการยืนยัน)": "🟢 ยืนยันแล้ว (Verified)",
+            "Specs / Notes (รายละเอียด/หมายเหตุ)": `โอนย้ายสิทธิ์มาจากพนักงานลาออก (${h.resignedEmp}) สู่ (${h.activeEmp}) เรียบร้อย`
+          }).catch(() => null);
+
+          await lark.createRecord(TABLE_AUDIT, {
+            "Brand & Model (ยี่ห้อและรุ่น)": h.deviceName,
+            "IT Review Status (ผลการตรวจสอบโดย IT)": "🟢 Verified & Locked (อนุมัติเข้า Master)",
+            "Notes (หมายเหตุจากพนักงาน)": `อนุมัติการส่งต่อเครื่องจาก ${h.resignedEmp} ให้แก่ ${h.activeEmp}`
+          }).catch(() => null);
+        }
+
+        return jsonResponse({
+          ok: true,
+          message: `อนุมัติการส่งต่ออุปกรณ์สำเร็จ ${handoversToResolve.length} รายการ!`
+        });
+      }
+
+      // Batch Reclaim ALL devices from resigned staff
+      if (pathname === "/api/admin/resigned/reclaim-all-batch" && method === "POST") {
+        if (!requireAdmin(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED" }, 401);
+        const assets = await lark.fetchRecords(TABLE_MASTER);
+        let resignedNames = [];
+        if (env.IT_ASSET_KV) {
+          const kvData = await env.IT_ASSET_KV.get("resigned_staff");
+          if (kvData) resignedNames = JSON.parse(kvData);
+        }
+
+        const allReclaimIds = [];
+        assets.forEach(a => {
+          const holder = getHolderName(a["Current Holder (ผู้ถือครองปัจจุบัน)"]);
+          if (!holder || holder.includes("ส่วนกลาง")) return;
+          const isRes = holder.includes("(ลาออก)") || holder.includes("Closed") || resignedNames.includes(holder);
+          if (isRes) {
+            allReclaimIds.push({ recId: a.record_id, empName: holder });
+          }
+        });
+
+        if (allReclaimIds.length === 0) {
+          return jsonResponse({ ok: true, message: "ไม่มีอุปกรณ์ค้างกับพนักงานที่ลาออกแล้ว" });
+        }
+
+        const todayStr = new Date().toISOString().split("T")[0];
+        for (const item of allReclaimIds) {
+          await lark.updateRecord(TABLE_MASTER, item.recId, {
+            "Status (สถานะอุปกรณ์)": "🔵 พร้อมใช้งานในคลัง (Available in Stock)",
+            "Current Holder (ผู้ถือครองปัจจุบัน)": null,
+            "Audit Status (สถานะการยืนยัน)": "🟢 รับคืนเข้าคลังกลาง (Returned to Stock)",
+            "Specs / Notes (รายละเอียด/หมายเหตุ)": `รับคืนจากพนักงานลาออก (${item.empName}) เข้าคลังเมื่อ: ${todayStr}`
+          }).catch(() => null);
+        }
+
+        return jsonResponse({
+          ok: true,
+          message: `ดึงอุปกรณ์ของพนักงานที่ลาออกทั้งหมด ${allReclaimIds.length} รายการ กลับเข้าคลังกลางเรียบร้อย!`,
+          count: allReclaimIds.length
+        });
+      }
+
+      // Auto Clean Duplicates
+      if (pathname === "/api/admin/duplicates/auto-clean" && method === "POST") {
+        if (!requireAdmin(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED" }, 401);
+        const assets = await lark.fetchRecords(TABLE_MASTER);
+        const snMap = {};
+        assets.forEach(a => {
+          const sn = (a["Serial Number (S/N)"] || "").trim();
+          if (sn && sn !== "---" && sn.toLowerCase() !== "none" && sn !== "-" && sn.length >= 4) {
+            if (!snMap[sn]) snMap[sn] = [];
+            snMap[sn].push(a);
+          }
+        });
+
+        const recordsToDelete = [];
+        for (const [sn, list] of Object.entries(snMap)) {
+          if (list.length > 1) {
+            const verifiedIdx = list.findIndex(item => {
+              const s = getSingleValue(item["Audit Status (สถานะการยืนยัน)"]);
+              return s && s.includes("ยืนยันแล้ว");
+            });
+            const keepIndex = verifiedIdx >= 0 ? verifiedIdx : 0;
+            list.forEach((item, idx) => {
+              if (idx !== keepIndex) recordsToDelete.push(item.record_id);
+            });
+          }
+        }
+
+        if (recordsToDelete.length === 0) {
+          return jsonResponse({ ok: true, message: "ไม่พบรายการ S/N ซ้ำซ้อนในระบบ" });
+        }
+
+        await lark.batchDeleteRecords(TABLE_MASTER, recordsToDelete);
+        return jsonResponse({
+          ok: true,
+          message: `ระบบลบรายการซ้ำซ้อนออกให้อัตโนมัติเรียบร้อย ${recordsToDelete.length} รายการ!`,
+          deletedCount: recordsToDelete.length
+        });
+      }
+
+      // Bot Config & Whitelist
+      if (pathname === "/api/admin/bot/config" && method === "GET") {
+        return jsonResponse({
+          ok: true,
+          botSandboxMode: env.BOT_SANDBOX_MODE === "true",
+          whitelist: (env.BOT_TEST_WHITELIST || "").split(",").map(s => s.trim()).filter(Boolean)
+        });
+      }
+
       // Audit Logs
       if (pathname === "/api/admin/audit-logs" && method === "GET") {
         if (!requireAdmin(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED" }, 401);
