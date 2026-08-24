@@ -2119,6 +2119,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadLifecycleTasks() {
     if (!elements.colAdminCollection) return;
+    const token = sessionStorage.getItem('lifecycle_auth_token');
+    if (!token) return;
+
     try {
       const res = await lifecycleFetch(`/api/lifecycle/tasks?org=${lifecycleState.filterOrg}`).then(r => r.json());
       if (!res.ok) {
