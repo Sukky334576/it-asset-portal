@@ -16,7 +16,7 @@ const botConfig = {
     .split(',')
     .map(s => s.trim())
     .filter(Boolean),
-  portalBaseUrl: process.env.PORTAL_BASE_URL || 'https://maintaining-engineers-thoughts-waterproof.trycloudflare.com'
+  portalBaseUrl: process.env.PORTAL_BASE_URL || 'https://it-asset-portal.shine-toothbrush.workers.dev'
 };
 
 /**
