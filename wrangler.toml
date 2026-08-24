@@ -1,0 +1,22 @@
+# Cloudflare Workers Configuration for IT Asset Portal
+name = "it-asset-portal"
+main = "worker.js"
+compatibility_date = "2024-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[vars]
+NODE_ENV = "production"
+BASE_TOKEN = "G2IgbTgmmaLnQPs3LPblGz0ngQf"
+LARK_APP_ID = "cli_aa9a88a6e7f89ed2"
+ADMIN_PASSWORD = "itadmin2026"
+LARK_BOT_SECRET = "it_asset_hub_secure_hmac_secret_2026"
+BOT_SANDBOX_MODE = "true"
+BOT_TEST_WHITELIST = "ou_454631b08ccd239365dae0b60a0f0aa7,ou_8ea6e249b0ef03ee8ee2b6a58c49e52a,ou_ddbd83ad4f843334774fcde57c094c32,ou_71ae4aeeb5a23ef5345a32d4ff946b53"
+
+# Automated Cron Trigger: Every Mon-Fri at 09:00 AM BKK (02:00 AM UTC)
+[triggers]
+crons = ["0 2 * * 1-5"]
