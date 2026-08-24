@@ -775,10 +775,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderEmployeeDevices(devices) {
     if (!devices || devices.length === 0) {
       elements.employeeDeviceGrid.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">📦</div>
-          <h3>ไม่พบรายการอุปกรณ์ภายใต้ชื่อนี้</h3>
-          <p>หากคุณมีอุปกรณ์ที่ใช้งานอยู่ สามารถกดที่แท็บ <strong>"2. ลงทะเบียนเครื่องใหม่"</strong> เพื่อบันทึกข้อมูลได้ทันที</p>
+        <div style="grid-column: 1 / -1; background: white; padding: 3rem 2rem; border-radius: var(--radius-lg); text-align: center; border: 2px dashed #cbd5e1; box-shadow: var(--shadow-sm); margin-top: 1rem;">
+          <div style="font-size: 3rem; margin-bottom: 0.75rem;">📦</div>
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0 0 0.5rem;">ยังไม่มีอุปกรณ์ที่ลงทะเบียนภายใต้ชื่อของคุณ</h3>
+          <p style="color: #64748b; font-size: 0.95rem; max-width: 500px; margin: 0 auto 1.5rem; line-height: 1.5;">
+            ขณะนี้ยังไม่มีอุปกรณ์ IT (Laptop, PC, Monitor) ผูกอยู่กับบัญชี Lark นี้ หากคุณมีอุปกรณ์ประจำตัวที่ใช้งานอยู่ สามารถกดลงทะเบียนเพิ่มได้ทันทีครับ
+          </p>
+          <button class="btn btn-primary btn-lg" onclick="document.querySelector('[data-tab=\\'registerTab\\']').click()" style="padding: 12px 28px; font-weight: 700; border-radius: 10px;">
+            ➕ ลงทะเบียนอุปกรณ์ใหม่ประจำตัวคุณ
+          </button>
         </div>
       `;
       return;
@@ -2135,6 +2140,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (found) {
         selectEmployee(found);
+      } else {
+        // User logged in via Lark SSO but has 0 records in master sheet currently
+        selectEmployee({
+          id: targetOpenId,
+          name: ssoUser.name || ssoUser.realName || "พนักงาน",
+          organization: "XPO",
+          devices: [],
+          allVerified: true,
+          pendingCount: 0,
+          verifiedCount: 0
+        });
       }
       return true;
     } else if (state.isAdminLoggedIn) {
