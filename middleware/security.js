@@ -3,7 +3,7 @@
  * Comprehensive protection against OWASP Top 10 vulnerabilities
  */
 
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const rateLimit = require('express-rate-limit');
 
 // Secret Key for HMAC signature
