@@ -142,6 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     metricPending: document.getElementById('metricPending'),
     metricMissingTag: document.getElementById('metricMissingTag'),
     xpoProgressText: document.getElementById('xpoProgressText'),
+    xpoProgressBar: document.getElementById('xpoProgressBar'),
+    edduProgressText: document.getElementById('edduProgressText'),
+    edduProgressBar: document.getElementById('edduProgressBar'),
     btnCopyReminderText: document.getElementById('btnCopyReminderText'),
     btnCopyReminderSeg1: document.getElementById('btnCopyReminderSeg1'),
     btnCopyReminderSeg2: document.getElementById('btnCopyReminderSeg2'),
@@ -1488,18 +1491,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!state.adminStats) return;
     const s = state.adminStats;
 
-    elements.metricTotal.textContent = s.totalAssets;
-    elements.metricVerified.textContent = s.verifiedCount;
-    elements.metricVerifiedPct.textContent = `${s.overallPercent}%`;
-    elements.metricPending.textContent = s.pendingCount;
-    elements.metricMissingTag.textContent = s.missingTagCount;
+    if (elements.metricTotal) elements.metricTotal.textContent = s.totalAssets || 0;
+    if (elements.metricVerified) elements.metricVerified.textContent = s.verifiedCount || 0;
+    if (elements.metricVerifiedPct) elements.metricVerifiedPct.textContent = `${s.overallPercent || 0}%`;
+    if (elements.metricPending) elements.metricPending.textContent = s.pendingCount || 0;
+    if (elements.metricMissingTag) elements.metricMissingTag.textContent = s.missingTagCount || 0;
 
     // Progress Bars
-    elements.xpoProgressText.textContent = `${s.orgStats.XPO.verified} / ${s.orgStats.XPO.total} (${s.xpoPercent}%)`;
-    elements.xpoProgressBar.style.width = `${s.xpoPercent}%`;
+    if (elements.xpoProgressText) elements.xpoProgressText.textContent = `${s.orgStats?.XPO?.verified || 0} / ${s.orgStats?.XPO?.total || 0} (${s.xpoPercent || 0}%)`;
+    if (elements.xpoProgressBar) elements.xpoProgressBar.style.width = `${s.xpoPercent || 0}%`;
 
-    elements.edduProgressText.textContent = `${s.orgStats.EDDU.verified} / ${s.orgStats.EDDU.total} (${s.edduPercent}%)`;
-    elements.edduProgressBar.style.width = `${s.edduPercent}%`;
+    if (elements.edduProgressText) elements.edduProgressText.textContent = `${s.orgStats?.EDDU?.verified || 0} / ${s.orgStats?.EDDU?.total || 0} (${s.edduPercent || 0}%)`;
+    if (elements.edduProgressBar) elements.edduProgressBar.style.width = `${s.edduPercent || 0}%`;
 
     // Missing Tag Worklist
     const missingList = s.missingTagList || [];
