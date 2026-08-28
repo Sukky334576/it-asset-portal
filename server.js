@@ -914,6 +914,73 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
+// Add Central Stock Asset (Admin Only)
+app.post('/api/admin/stock/add', requireAdminAuth, async (req, res) => {
+    try {
+        const { deviceName, brand, deviceType, organization, assetTag, isUnknownTag, serialNumber, isUnknownSN, notes } = req.body;
+
+        const tag = isUnknownTag ? "ไม่ทราบ" : (assetTag || "ไม่ทราบ").trim();
+        const sn = isUnknownSN ? null : (serialNumber || "").trim() || null;
+        const missingTag = isUnknownTag || tag === "ไม่ทราบ";
+        const missingSN = isUnknownSN || !sn;
+
+        const auditStatus = missingTag
+            ? "🏷️ ต้องติดป้ายเลขทรัพย์สินใหม่ (Missing Tag)"
+            : "🟢 ยืนยันแล้ว (Verified)";
+
+        const masterRow = [
+            tag,
+            sn,
+            deviceName || `${brand} ${deviceType}`,
+            deviceType || "Laptop (NB)",
+            brand || "Other",
+            organization || "XPO",
+            null, // No individual holder -> Central Stock
+            "🟡 สำรองในคลัง (Central Stock)",
+            auditStatus,
+            missingTag,
+            missingSN,
+            notes ? `อุปกรณ์ส่วนกลาง: ${notes}` : "อุปกรณ์สำรองส่วนกลาง (Central Stock)"
+        ];
+
+        const masterPayload = {
+            fields: [
+                "Asset Tag (เลขทรัพย์สิน)",
+                "Serial Number (S/N)",
+                "Device Name (ชื่อรุ่น/อุปกรณ์)",
+                "Device Type (ประเภทอุปกรณ์)",
+                "Brand (ยี่ห้อ)",
+                "Organization (สังกัด)",
+                "Current Holder (ผู้ถือครองปัจจุบัน)",
+                "Status (สถานะอุปกรณ์)",
+                "Audit Status (สถานะการยืนยัน)",
+                "Missing Tag? (ไม่มีเลขทรัพย์สิน)",
+                "Missing Serial? (ไม่มี S/N)",
+                "Specs / Notes (รายละเอียด/หมายเหตุ)"
+            ],
+            rows: [masterRow]
+        };
+
+        const createRes = await runLarkCli([
+            "base", "+record-batch-create",
+            "--base-token", BASE_TOKEN,
+            "--table-id", TABLE_MASTER,
+            "--as", "user",
+            "--json", JSON.stringify(masterPayload)
+        ]);
+
+        lastFetchTime = 0;
+
+        res.json({
+            ok: true,
+            message: "🎉 เพิ่มอุปกรณ์เข้าคลังส่วนกลางเรียบร้อยแล้ว!",
+            data: createRes.data
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
 // 7. Get Loans & Available Stock & History
 app.get('/api/loans', async (req, res) => {
     try {

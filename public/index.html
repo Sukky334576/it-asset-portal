@@ -369,16 +369,20 @@
 
       <!-- Subtab 1: Available Stock for Temporary Loan -->
       <div class="subtab-content active" id="subStock">
-        <div class="stock-filter-bar">
-          <div class="filter-text">แสดงอุปกรณ์คงคลังที่มีสถานะ <strong>"พร้อมใช้งานในคลัง"</strong> สามารถกดยืมด่วนได้ทันที:</div>
-          <div class="stock-category-pills">
-            <button class="stock-cat-pill active" data-cat="ALL">ทั้งหมด</button>
-            <button class="stock-cat-pill" data-cat="Laptop">💻 โน้ตบุ๊ก</button>
-            <button class="stock-cat-pill" data-cat="Monitor">🖥️ จอมอนิเตอร์</button>
-            <button class="stock-cat-pill" data-cat="Adapter">🔌 สายชาร์จ/Adapter</button>
-            <button class="stock-cat-pill" data-cat="Hub">🔌 สายแปลง/Dongle/HDMI</button>
-            <button class="stock-cat-pill" data-cat="Mouse">🖱️ เมาส์/คีย์บอร์ด</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+          <div class="stock-filter-bar" style="margin-bottom: 0;">
+            <div class="stock-category-pills">
+              <button class="stock-cat-pill active" data-cat="ALL">ทั้งหมด</button>
+              <button class="stock-cat-pill" data-cat="Laptop">💻 โน้ตบุ๊ก</button>
+              <button class="stock-cat-pill" data-cat="Monitor">🖥️ จอมอนิเตอร์</button>
+              <button class="stock-cat-pill" data-cat="Adapter">🔌 สายชาร์จ/Adapter</button>
+              <button class="stock-cat-pill" data-cat="Hub">🔌 สายแปลง/Dongle/HDMI</button>
+              <button class="stock-cat-pill" data-cat="Mouse">🖱️ เมาส์/คีย์บอร์ด</button>
+            </div>
           </div>
+          <button class="btn btn-primary btn-sm" id="btnOpenAddStockModal" style="background: #0284c7; border-color: #0369a1; font-weight: 600; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">
+            <span>➕</span> เพิ่มอุปกรณ์เข้าคลังส่วนกลาง (Admin)
+          </button>
         </div>
         <div class="stock-grid" id="availableStockGrid">
           <div class="loading-spinner">กำลังโหลดรายการสต็อก...</div>
@@ -1450,6 +1454,124 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="onboardingModalCancelBtn">ยกเลิก</button>
         <button class="btn btn-primary" id="onboardingModalSubmitBtn">🚀 ส่งเรื่องให้ Admin จัดเตรียมของ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Admin Auth Prompt Modal (ใส่รหัส Admin ก่อนเพิ่มของเข้าคลัง) -->
+  <div class="modal-overlay" id="adminAuthPromptModal" style="display: none;">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+        <h3 style="color: #0f172a; font-size: 1.05rem;">🔒 ยืนยันสิทธิ์ IT Admin</h3>
+        <button class="modal-close-btn" id="adminAuthPromptCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 18px 20px;">
+        <p style="font-size: 0.875rem; color: #475569; margin-bottom: 12px;">
+          กรุณากรอกรหัสผ่านผู้ดูแลระบบ (IT Admin PIN) เพื่อเพิ่มอุปกรณ์เข้าคลังส่วนกลาง:
+        </p>
+        <div class="form-group" style="margin-bottom: 0;">
+          <input type="password" id="adminPromptPasswordInput" placeholder="กรอกรหัสผ่าน เช่น itadmin2026" style="font-size: 1rem; padding: 10px 12px; width: 100%;" autocomplete="off">
+          <div id="adminPromptErrorMsg" style="color: #dc2626; font-size: 0.8125rem; margin-top: 6px; display: none;">❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="adminAuthPromptCancelBtn">ยกเลิก</button>
+        <button class="btn btn-primary btn-sm" id="adminAuthPromptSubmitBtn" style="background: #0284c7; border-color: #0369a1;">🔑 ยืนยันรหัสผ่าน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Central Stock Asset (เพิ่มอุปกรณ์เข้าคลังส่วนกลาง) -->
+  <div class="modal-overlay" id="addCentralStockModal" style="display: none;">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header" style="background: #f0f9ff; border-bottom: 1px solid #bae6fd;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.25rem;">📦</span>
+          <h3 style="color: #0369a1;">เพิ่มอุปกรณ์เข้าคลังส่วนกลาง (Add Central Stock)</h3>
+        </div>
+        <button class="modal-close-btn" id="addCentralStockCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 18px 20px;">
+        <p style="font-size: 0.8125rem; color: #0284c7; margin-bottom: 14px; background: #e0f2fe; padding: 8px 12px; border-radius: 6px;">
+          ℹ️ อุปกรณ์นี้จะถูกบันทึกเป็น <strong>"🟡 สำรองในคลัง (Central Stock)"</strong> และจะปรากฏในแท็บ 3 ทันที เพื่อให้พนักงานคนอื่นมองเห็นและกดยืม/ขอเปลี่ยนได้
+        </p>
+
+        <form id="addCentralStockForm">
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="stockDeviceType">ประเภทอุปกรณ์ <span class="req">*</span></label>
+              <select id="stockDeviceType" required>
+                <option value="Laptop (NB)">💻 โน้ตบุ๊ก (Laptop / NB)</option>
+                <option value="Monitor (MO)">🖥️ จอมอนิเตอร์ (Monitor / MO)</option>
+                <option value="Adapter (AD)">🔌 สายชาร์จ / Adapter</option>
+                <option value="Hub/Dongle">🔌 สายแปลง / Hub / Dongle</option>
+                <option value="Mouse/Keyboard (MU/KB)">🖱️ เมาส์ / คีย์บอร์ด</option>
+                <option value="Storage (SSD/HDD)">💾 ฮาร์ดดิสก์ / SSD / HDD</option>
+                <option value="Phone/Tablet">📱 โทรศัพท์ / แท็บเล็ต</option>
+                <option value="Other">📦 อุปกรณ์อื่นๆ</option>
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label for="stockBrand">ยี่ห้อ (Brand) <span class="req">*</span></label>
+              <select id="stockBrand" required>
+                <option value="Apple">Apple</option>
+                <option value="Lenovo">Lenovo</option>
+                <option value="Dell">Dell</option>
+                <option value="LG">LG</option>
+                <option value="Acer">Acer</option>
+                <option value="HP">HP</option>
+                <option value="Asus">Asus</option>
+                <option value="Logitech">Logitech</option>
+                <option value="Anitech">Anitech</option>
+                <option value="OKER">OKER</option>
+                <option value="Other">Other / อื่นๆ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-8">
+              <label for="stockDeviceName">ชื่อรุ่น / สเปกอุปกรณ์ <span class="req">*</span></label>
+              <input type="text" id="stockDeviceName" placeholder="เช่น MacBook Pro 14 M3, ThinkPad X1 Carbon, Dell 27 4K" required>
+            </div>
+            <div class="form-group col-4">
+              <label for="stockOrg">สังกัดกองกลาง <span class="req">*</span></label>
+              <select id="stockOrg" required>
+                <option value="XPO">XPO</option>
+                <option value="EDDU">EDDU</option>
+                <option value="HQ/ส่วนกลาง">HQ / ส่วนกลาง</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="stockAssetTag">เลขทรัพย์สิน (Asset Tag)</label>
+              <input type="text" id="stockAssetTag" placeholder="เช่น EQ67-01-002-01">
+              <label style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                <input type="checkbox" id="stockUnknownTag"> ยังไม่มี / ไม่ทราบเลขทรัพย์สิน
+              </label>
+            </div>
+            <div class="form-group col-6">
+              <label for="stockSerial">Serial Number (S/N ตัวเครื่องจริง)</label>
+              <input type="text" id="stockSerial" placeholder="เช่น C02XYZ12345, PC15WDMF">
+              <label style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                <input type="checkbox" id="stockUnknownSerial"> ไม่มี S/N บนตัวเครื่อง
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="stockNotes">หมายเหตุ / อุปกรณ์ส่วนควบในชุด:</label>
+            <input type="text" id="stockNotes" placeholder="เช่น มาพร้อมสายชาร์จ 67W, กระเป๋าใส่เครื่อง, สภาพ 95%">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="addCentralStockCancelBtn">ยกเลิก</button>
+        <button class="btn btn-primary btn-sm" id="addCentralStockSubmitBtn" style="background: #0284c7; border-color: #0369a1; font-weight: 600;">
+          💾 บันทึกเข้าคลังส่วนกลางทันที
+        </button>
       </div>
     </div>
   </div>

@@ -156,6 +156,30 @@ document.addEventListener('DOMContentLoaded', () => {
     missingTagTbody: document.getElementById('missingTagTbody'),
     missingTagBadgeCount: document.getElementById('missingTagBadgeCount'),
 
+    // Add Central Stock Elements
+    btnOpenAddStockModal: document.getElementById('btnOpenAddStockModal'),
+    adminAuthPromptModal: document.getElementById('adminAuthPromptModal'),
+    adminAuthPromptCloseBtn: document.getElementById('adminAuthPromptCloseBtn'),
+    adminAuthPromptCancelBtn: document.getElementById('adminAuthPromptCancelBtn'),
+    adminAuthPromptSubmitBtn: document.getElementById('adminAuthPromptSubmitBtn'),
+    adminPromptPasswordInput: document.getElementById('adminPromptPasswordInput'),
+    adminPromptErrorMsg: document.getElementById('adminPromptErrorMsg'),
+
+    addCentralStockModal: document.getElementById('addCentralStockModal'),
+    addCentralStockCloseBtn: document.getElementById('addCentralStockCloseBtn'),
+    addCentralStockCancelBtn: document.getElementById('addCentralStockCancelBtn'),
+    addCentralStockSubmitBtn: document.getElementById('addCentralStockSubmitBtn'),
+    addCentralStockForm: document.getElementById('addCentralStockForm'),
+    stockDeviceType: document.getElementById('stockDeviceType'),
+    stockBrand: document.getElementById('stockBrand'),
+    stockDeviceName: document.getElementById('stockDeviceName'),
+    stockOrg: document.getElementById('stockOrg'),
+    stockAssetTag: document.getElementById('stockAssetTag'),
+    stockUnknownTag: document.getElementById('stockUnknownTag'),
+    stockSerial: document.getElementById('stockSerial'),
+    stockUnknownSerial: document.getElementById('stockUnknownSerial'),
+    stockNotes: document.getElementById('stockNotes'),
+
     // Lark Bot Test Console
     botTestUserSelect: document.getElementById('botTestUserSelect'),
     botTestCardType: document.getElementById('botTestCardType'),
@@ -784,6 +808,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     renderEmployeeDevices(emp.devices);
+
+    // Automatically lock and pre-fill Tab 2 registration name
+    if (elements.regEmployeeName) {
+      elements.regEmployeeName.value = emp.name;
+      elements.regEmployeeName.readOnly = true;
+      elements.regEmployeeName.style.background = "#f1f5f9";
+      elements.regEmployeeName.style.cursor = "not-allowed";
+      elements.regEmployeeName.title = "🔒 ล็อกชื่อตามบัญชี Lark ที่เข้าสู่ระบบ";
+    }
+    if (elements.regEmployeeId) {
+      elements.regEmployeeId.value = emp.id || '';
+    }
+    if (elements.regOrg && emp.organization) {
+      elements.regOrg.value = emp.organization;
+    }
   }
 
   // Single Reclaim Button
@@ -1484,6 +1523,156 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.textContent = "📤 ยื่นคำขอยืมอุปกรณ์ชั่วคราว";
     }
   });
+
+  // ---------------- CENTRAL STOCK MANAGEMENT (ADMIN) ---------------- //
+
+  if (elements.btnOpenAddStockModal) {
+    elements.btnOpenAddStockModal.addEventListener('click', () => {
+      if (state.isAdminLoggedIn) {
+        elements.addCentralStockModal.style.display = 'flex';
+      } else {
+        elements.adminAuthPromptModal.style.display = 'flex';
+        elements.adminPromptPasswordInput.value = '';
+        elements.adminPromptErrorMsg.style.display = 'none';
+        setTimeout(() => elements.adminPromptPasswordInput.focus(), 100);
+      }
+    });
+  }
+
+  if (elements.adminAuthPromptCloseBtn) {
+    elements.adminAuthPromptCloseBtn.addEventListener('click', () => {
+      elements.adminAuthPromptModal.style.display = 'none';
+    });
+  }
+  if (elements.adminAuthPromptCancelBtn) {
+    elements.adminAuthPromptCancelBtn.addEventListener('click', () => {
+      elements.adminAuthPromptModal.style.display = 'none';
+    });
+  }
+
+  if (elements.adminAuthPromptSubmitBtn) {
+    elements.adminAuthPromptSubmitBtn.addEventListener('click', async () => {
+      const pass = elements.adminPromptPasswordInput.value.trim();
+      if (!pass) return;
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pass })
+        }).then(r => r.json());
+
+        if (res.ok && res.token) {
+          sessionStorage.setItem('it_admin_token', res.token);
+          state.isAdminLoggedIn = true;
+          elements.adminAuthPromptModal.style.display = 'none';
+          elements.addCentralStockModal.style.display = 'flex';
+          showToast("ยืนยันสิทธิ์ IT Admin สำเร็จ", "success");
+        } else {
+          elements.adminPromptErrorMsg.style.display = 'block';
+        }
+      } catch (err) {
+        elements.adminPromptErrorMsg.style.display = 'block';
+      }
+    });
+  }
+
+  if (elements.adminPromptPasswordInput) {
+    elements.adminPromptPasswordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        elements.adminAuthPromptSubmitBtn.click();
+      }
+    });
+  }
+
+  if (elements.stockUnknownTag) {
+    elements.stockUnknownTag.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        elements.stockAssetTag.value = "ไม่ทราบ";
+        elements.stockAssetTag.disabled = true;
+      } else {
+        elements.stockAssetTag.value = "";
+        elements.stockAssetTag.disabled = false;
+      }
+    });
+  }
+
+  if (elements.stockUnknownSerial) {
+    elements.stockUnknownSerial.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        elements.stockSerial.value = "---";
+        elements.stockSerial.disabled = true;
+      } else {
+        elements.stockSerial.value = "";
+        elements.stockSerial.disabled = false;
+      }
+    });
+  }
+
+  if (elements.addCentralStockCloseBtn) {
+    elements.addCentralStockCloseBtn.addEventListener('click', () => {
+      elements.addCentralStockModal.style.display = 'none';
+    });
+  }
+  if (elements.addCentralStockCancelBtn) {
+    elements.addCentralStockCancelBtn.addEventListener('click', () => {
+      elements.addCentralStockModal.style.display = 'none';
+    });
+  }
+
+  if (elements.addCentralStockSubmitBtn) {
+    elements.addCentralStockSubmitBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const devType = elements.stockDeviceType.value;
+      const brand = elements.stockBrand.value;
+      const devName = elements.stockDeviceName.value.trim();
+      const org = elements.stockOrg.value;
+      const tag = elements.stockAssetTag.value.trim();
+      const sn = elements.stockSerial.value.trim();
+      const notes = elements.stockNotes.value.trim();
+
+      if (!devName) {
+        showToast("กรุณาระบุชื่อรุ่น / สเปกอุปกรณ์", "warning");
+        elements.stockDeviceName.focus();
+        return;
+      }
+
+      elements.addCentralStockSubmitBtn.disabled = true;
+      elements.addCentralStockSubmitBtn.textContent = "กำลังบันทึกเข้าคลัง...";
+
+      try {
+        const res = await adminFetch('/api/admin/stock/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceType: devType,
+            brand: brand,
+            deviceName: devName,
+            organization: org,
+            assetTag: tag,
+            isUnknownTag: elements.stockUnknownTag?.checked,
+            serialNumber: sn,
+            isUnknownSN: elements.stockUnknownSerial?.checked,
+            notes: notes
+          })
+        }).then(r => r.json());
+
+        if (res.ok) {
+          showToast("🎉 เพิ่มอุปกรณ์เข้าคลังส่วนกลางเรียบร้อยแล้ว!", "success");
+          elements.addCentralStockModal.style.display = 'none';
+          elements.addCentralStockForm.reset();
+          loadAllData(true);
+        } else {
+          showToast(res.message || "เกิดข้อผิดพลาดในการบันทึก", "error");
+        }
+      } catch (err) {
+        showToast(`เชื่อมต่อล้มเหลว: ${err.message}`, "error");
+      } finally {
+        elements.addCentralStockSubmitBtn.disabled = false;
+        elements.addCentralStockSubmitBtn.textContent = "💾 บันทึกเข้าคลังส่วนกลางทันที";
+      }
+    });
+  }
 
   // ---------------- TAB 4: IT ADMIN DASHBOARD ---------------- //
 

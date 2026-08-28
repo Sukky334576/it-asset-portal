@@ -477,6 +477,51 @@ export default {
         });
       }
 
+      // Add Central Stock Asset (Admin Only)
+      if (pathname === "/api/admin/stock/add" && method === "POST") {
+        if (!requireAdmin(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED", message: "กรุณาใส่รหัสผ่านแอดมิน" }, 401);
+        const body = await request.json().catch(() => ({}));
+        const { deviceName, brand, deviceType, organization, assetTag, serialNumber, isUnknownTag, isUnknownSN, notes } = body;
+
+        const isMissTag = Boolean(isUnknownTag || !assetTag || assetTag === "ไม่ทราบ");
+        const isMissSN = Boolean(isUnknownSN || !serialNumber || serialNumber === "---");
+
+        const tag = isMissTag ? "ไม่ทราบ" : (assetTag || "ไม่ทราบ").trim();
+        const sn = isMissSN ? "-" : (serialNumber || "").trim();
+
+        const auditStatus = isMissTag
+          ? "🏷️ ต้องติดป้ายเลขทรัพย์สินใหม่ (Missing Tag)"
+          : "🟢 ยืนยันแล้ว (Verified)";
+
+        const newRec = {
+          "Brand (ยี่ห้อ)": brand || "Other",
+          "Device Name (ชื่อรุ่น/อุปกรณ์)": deviceName || `${brand || ""} ${deviceType || "อุปกรณ์ IT"}`.trim(),
+          "Device Type (ประเภทอุปกรณ์)": deviceType || "Laptop (NB)",
+          "Organization (สังกัด)": organization || "XPO",
+          "Serial Number (S/N)": sn,
+          "Asset Tag (เลขทรัพย์สิน)": tag,
+          "Missing Tag? (ไม่มีเลขทรัพย์สิน)": isMissTag,
+          "Missing Serial? (ไม่มี S/N)": isMissSN,
+          "Status (สถานะอุปกรณ์)": "🟡 สำรองในคลัง (Central Stock)",
+          "Audit Status (สถานะการยืนยัน)": auditStatus,
+          "Specs / Notes (รายละเอียด/หมายเหตุ)": notes ? `อุปกรณ์ส่วนกลาง: ${notes}` : "อุปกรณ์สำรองส่วนกลาง (Central Stock)"
+        };
+
+        const created = await lark.createRecord(TABLE_MASTER, newRec);
+
+        await lark.createRecord(TABLE_AUDIT, {
+          "Brand & Model (ยี่ห้อและรุ่น)": `${newRec["Brand (ยี่ห้อ)"]} ${newRec["Device Name (ชื่อรุ่น/อุปกรณ์)"]}`,
+          "IT Review Status (ผลการตรวจสอบโดย IT)": "🟢 อุปกรณ์ส่วนกลาง (Central Stock)",
+          "Notes (หมายเหตุจากพนักงาน)": `แอดมินเพิ่มอุปกรณ์เข้าคลังส่วนกลาง: ${tag} / ${sn} (${notes || "-"})`
+        }).catch(() => null);
+
+        return jsonResponse({
+          ok: true,
+          message: "🎉 เพิ่มอุปกรณ์เข้าคลังส่วนกลางเรียบร้อยแล้ว!",
+          record: created
+        });
+      }
+
       if (pathname === "/api/loans" && method === "GET") {
         const [assets, loans] = await Promise.all([
           lark.fetchRecords(TABLE_MASTER),
