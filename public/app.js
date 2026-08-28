@@ -142,10 +142,13 @@ document.addEventListener('DOMContentLoaded', () => {
     metricPending: document.getElementById('metricPending'),
     metricMissingTag: document.getElementById('metricMissingTag'),
     xpoProgressText: document.getElementById('xpoProgressText'),
-    xpoProgressBar: document.getElementById('xpoProgressBar'),
-    edduProgressText: document.getElementById('edduProgressText'),
-    edduProgressBar: document.getElementById('edduProgressBar'),
     btnCopyReminderText: document.getElementById('btnCopyReminderText'),
+    btnCopyReminderSeg1: document.getElementById('btnCopyReminderSeg1'),
+    btnCopyReminderSeg2: document.getElementById('btnCopyReminderSeg2'),
+    btnPreviewCardSeg1: document.getElementById('btnPreviewCardSeg1'),
+    btnPreviewCardSeg2: document.getElementById('btnPreviewCardSeg2'),
+    seg1CountBadge: document.getElementById('seg1CountBadge'),
+    seg2CountBadge: document.getElementById('seg2CountBadge'),
     copySuccessMsg: document.getElementById('copySuccessMsg'),
     missingTagTbody: document.getElementById('missingTagTbody'),
     missingTagBadgeCount: document.getElementById('missingTagBadgeCount'),
@@ -2745,25 +2748,138 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Copy Reminder Message for Lark Chat
-  elements.btnCopyReminderText.addEventListener('click', () => {
-    if (!state.adminStats) return;
-    const pendingList = state.adminStats.unconfirmedEmployees.slice(0, 20).join(', ');
-    const msg = `📢 [แจ้งเตือนแคมเปญยืนยันอุปกรณ์ IT ประจำตัว - 7 Days Freeze Policy]
-ขอความร่วมมือพนักงานทุกคนเข้าไปตรวจสอบและกดยืนยันเครื่องของตนเองภายในสัปดาห์นี้ เพื่อป้องกันข้อมูลสูญหายและอัปเดตทะเบียนทรัพย์สินกลางครับ
+  // Copy Reminder Message for Segment 1: Employees with pending devices
+  if (elements.btnCopyReminderSeg1) {
+    elements.btnCopyReminderSeg1.addEventListener('click', () => {
+      const pendingNames = state.employees.filter(e => !e.allVerified && e.devices && e.devices.length > 0 && !e.isResigned).map(e => e.name);
+      const sampleNames = pendingNames.slice(0, 15).join(', ');
+      const msg = `🚨 [แจ้งเตือนกลุ่ม 1: ยืนยันเครื่อง IT ประจำตัว - 7 Days Freeze]
+สวัสดีครับทุกคน 👋
+ระบบตรวจพบอุปกรณ์คอมพิวเตอร์/จอประจำตัวที่ผูกกับชื่อของคุณในระบบแล้ว แต่ **ยังรอการกดยืนยันความถูกต้อง** อยู่นะครับ
 
-🔗 ลิงก์ระบบ IT Asset Hub: http://localhost:3000
+👉 **สิ่งที่ต้องทำ:**
+1. กดเข้าสู่ระบบ: https://it-asset-portal.shine-toothbrush.workers.dev
+2. ล็อกอินด้วย Lark ➔ ตรวจสอบเลขเครื่องและ Serial Number
+3. กดปุ่มเขียว [✅ ข้อมูลถูกต้อง] ได้ทันที (ใช้เวลาไม่เกิน 10 วินาทีครับ)
 
-📌 รายชื่อที่ยังรอการยืนยัน:
-${pendingList}${state.adminStats.unconfirmedEmployees.length > 20 ? ' ...และท่านอื่นๆ' : ''}
+📌 รายชื่อที่รอการยืนยัน (${pendingNames.length} ท่าน):
+${sampleNames}${pendingNames.length > 15 ? ' ...และเพื่อนๆ อีก ' + (pendingNames.length - 15) + ' ท่าน' : ''}
 
-*หากไม่พบป้ายเลขทรัพย์สิน สามารถติ๊กเลือก "ไม่ทราบเลขทรัพย์สิน" เพื่อให้ทีม IT เข้าไปติดป้ายใหม่ได้ครับ ขอบคุณครับ! 🙏`;
+ขอบคุณทุกคนที่ช่วยกันจัดระเบียบข้อมูลทรัพย์สิน IT กลางครับ! 🙏✨`;
 
-    navigator.clipboard.writeText(msg).then(() => {
-      elements.copySuccessMsg.style.display = 'block';
-      setTimeout(() => elements.copySuccessMsg.style.display = 'none', 4000);
+      navigator.clipboard.writeText(msg).then(() => {
+        if (elements.copySuccessMsg) {
+          elements.copySuccessMsg.textContent = "✅ คัดลอกข้อความแจ้งเตือนกลุ่มที่ 1 สำเร็จ!";
+          elements.copySuccessMsg.style.display = 'block';
+          setTimeout(() => elements.copySuccessMsg.style.display = 'none', 4000);
+        }
+        showToast("คัดลอกข้อความกลุ่มที่ 1 เรียบร้อย", "success");
+      });
     });
-  });
+  }
+
+  // Copy Reminder Message for Segment 2: Zero Devices / New Registration
+  if (elements.btnCopyReminderSeg2) {
+    elements.btnCopyReminderSeg2.addEventListener('click', () => {
+      const msg = `📦 [แจ้งเตือนกลุ่ม 2: สำรวจ & ขึ้นทะเบียนอุปกรณ์ IT ประจำตัว - 7 Days Freeze]
+สวัสดีครับทุกคน 👋
+ขณะนี้บริษัทกำลังสำรวจและจัดระเบียบอุปกรณ์คอมพิวเตอร์ โน้ตบุ๊ก และจอมอนิเตอร์ของพนักงานทุกคนครับ
+
+🔍 **สถานะของคุณ:** ขณะนี้ระบบยัง **ไม่มีข้อมูลอุปกรณ์ผูกกับบัญชี Lark ของคุณ**
+
+👉 **สิ่งที่ต้องทำ:**
+• **กรณีที่คุณมีคอมพิวเตอร์ / โน้ตบุ๊ก / จอ ประจำตัวใช้งานอยู่:**
+กรุณาเข้าสู่ระบบ: https://it-asset-portal.shine-toothbrush.workers.dev แล้วไปที่ **แท็บ 2 (ลงทะเบียนเครื่องใหม่)** เพื่อกรอก Serial Number ใต้เครื่องขึ้นทะเบียนได้ทันทีครับ
+• **กรณีที่คุณไม่มีอุปกรณ์ประจำตัว (ใช้เครื่องกองกลาง หรือตำแหน่งงานที่ไม่ใช้อุปกรณ์คอม):**
+✅ ไม่ต้องดำเนินการใดๆ ครับ ถือว่าข้อมูลถูกต้องครบถ้วนแล้วครับผม
+
+ขอบคุณทุกคนสำหรับความร่วมมือครับ! 🙏✨`;
+
+      navigator.clipboard.writeText(msg).then(() => {
+        if (elements.copySuccessMsg) {
+          elements.copySuccessMsg.textContent = "✅ คัดลอกข้อความแจ้งเตือนกลุ่มที่ 2 สำเร็จ!";
+          elements.copySuccessMsg.style.display = 'block';
+          setTimeout(() => elements.copySuccessMsg.style.display = 'none', 4000);
+        }
+        showToast("คัดลอกข้อความกลุ่มที่ 2 เรียบร้อย", "success");
+      });
+    });
+  }
+
+  // Preview Lark Bot Card Segment 1
+  if (elements.btnPreviewCardSeg1) {
+    elements.btnPreviewCardSeg1.addEventListener('click', () => {
+      openPreviewModal("🚨 ตัวอย่างการ์ดแจ้งเตือนกลุ่มที่ 1 (คนมีเครื่องรอการยืนยัน)", `
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); font-family: -apple-system, sans-serif;">
+          <div style="background: #ef4444; color: #ffffff; padding: 12px 16px; font-weight: 700; font-size: 0.9375rem; display: flex; align-items: center; gap: 8px;">
+            <span>🚨</span> <span>แจ้งเตือน: แคมเปญยืนยันเครื่อง IT ประจำตัว (7 Days Freeze)</span>
+          </div>
+          <div style="padding: 16px; font-size: 0.875rem; color: #334155; line-height: 1.6;">
+            <p>สวัสดีครับคุณ <strong>{ชื่อพนักงาน}</strong> 👋</p>
+            <p>ขณะนี้บริษัทอยู่ในช่วง <strong>Freeze Period 7 วัน</strong> ขอความร่วมมือตรวจสอบอุปกรณ์ที่คุณถือครองอยู่ด้านล่างนี้ครับ:</p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin: 12px 0;">
+              <strong>• ThinkPad X280</strong><br>
+              <small style="color: #64748b;">- เลขทรัพย์สิน: <code>COM-00047</code> | S/N: <code>PC-15WDMF</code><br>- สถานะ: ⏳ <strong>รอการยืนยัน</strong></small>
+            </div>
+            <button class="btn btn-primary btn-block" style="background: #2563eb; color: #ffffff; border: none; border-radius: 6px; padding: 10px; font-weight: 600; font-size: 0.875rem; cursor: default;">
+              🔍 เข้าสู่ระบบเพื่อตรวจสอบและยืนยันเครื่อง (1 คลิก)
+            </button>
+          </div>
+        </div>
+      `);
+    });
+  }
+
+  // Preview Lark Bot Card Segment 2
+  if (elements.btnPreviewCardSeg2) {
+    elements.btnPreviewCardSeg2.addEventListener('click', () => {
+      openPreviewModal("📦 ตัวอย่างการ์ดแจ้งเตือนกลุ่มที่ 2 (คนที่ยังไม่มีเครื่องในระบบ)", `
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); font-family: -apple-system, sans-serif;">
+          <div style="background: #0ea5e9; color: #ffffff; padding: 12px 16px; font-weight: 700; font-size: 0.9375rem; display: flex; align-items: center; gap: 8px;">
+            <span>📦</span> <span>แจ้งเตือน: สำรวจ & ขึ้นทะเบียนอุปกรณ์ IT ประจำตัว (7-Day Freeze)</span>
+          </div>
+          <div style="padding: 16px; font-size: 0.875rem; color: #334155; line-height: 1.6;">
+            <p>สวัสดีครับคุณ <strong>{ชื่อพนักงาน}</strong> 👋</p>
+            <p>ขณะนี้บริษัทอยู่ในช่วง <strong>7-Day Freeze Campaign</strong> เพื่อสำรวจและจัดระเบียบอุปกรณ์คอมพิวเตอร์และจอประจำตัวของทุกคนครับ</p>
+            <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin: 12px 0;">
+              🔍 <strong>สถานะปัจจุบัน:</strong> ยังไม่พบอุปกรณ์คอมพิวเตอร์หรือจอผูกกับบัญชี Lark ของคุณในระบบกลาง
+            </div>
+            <p style="font-size: 0.8125rem; color: #475569;">
+              • <strong>หากมีคอม/จอประจำตัว:</strong> โปรดกดปุ่มด้านล่างเพื่อไปที่แท็บ 2 แล้วลงทะเบียนเครื่องใหม่<br>
+              • <strong>หากไม่มีอุปกรณ์ประจำตัว:</strong> ไม่ต้องดำเนินการใดๆ ครับ
+            </p>
+            <button class="btn btn-primary btn-block" style="background: #0284c7; color: #ffffff; border: none; border-radius: 6px; padding: 10px; font-weight: 600; font-size: 0.875rem; cursor: default;">
+              ➕ เข้าสู่ระบบเพื่อลงทะเบียนเครื่องใหม่ (เปิดบนเว็บ)
+            </button>
+          </div>
+        </div>
+      `);
+    });
+  }
+
+  function openPreviewModal(title, htmlContent) {
+    const existing = document.getElementById('previewBotModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'previewBotModal';
+    modal.className = 'modal-backdrop active';
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width: 480px; width: 90%;">
+        <div class="modal-header">
+          <h3>${title}</h3>
+          <button class="modal-close" onclick="document.getElementById('previewBotModal').remove()">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 16px;">
+          ${htmlContent}
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+          <button class="btn btn-secondary" onclick="document.getElementById('previewBotModal').remove()">ปิดหน้าต่าง</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
 
   // Refresh Button
   elements.btnRefreshData.addEventListener('click', () => {

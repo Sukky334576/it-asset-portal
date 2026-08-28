@@ -619,24 +619,54 @@
             </div>
           </div>
 
-          <div class="admin-card col-6">
-            <div class="admin-card-header">
-              <h3>💬 เครื่องมือส่งทวงใน Lark Chat</h3>
+          <div class="admin-card col-6" style="border: 1px solid #fed7aa; background: #fffcf8;">
+            <div class="admin-card-header" style="border-bottom: 1px solid #fed7aa;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.25rem;">📢</span>
+                <h3>ศูนย์ส่งแจ้งเตือนแบบแยก 2 กลุ่มเป้าหมาย (Segmented Notifications)</h3>
+              </div>
             </div>
-            <div class="reminder-tool">
-              <p>คัดลอกข้อความมาตรฐานพร้อมรายชื่อพนักงานที่ยังไม่ยืนยัน เพื่อส่งแจ้งเตือนใน Lark Chat ประจำกลุ่ม</p>
-              <button class="btn btn-secondary btn-block" id="btnCopyReminderText">
-                📋 คัดลอกข้อความแจ้งเตือน Freeze Campaign
-              </button>
-              <div class="copy-success" id="copySuccessMsg" style="display: none;">
-                ✅ คัดลอกข้อความสำเร็จ! นำไปวางใน Lark Chat ได้ทันที
+            <div class="reminder-tool" style="padding: 12px 0;">
+              <!-- Segment 1: People with devices pending verification -->
+              <div style="background: #ffffff; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <strong style="color: #9a3412; font-size: 0.875rem;">🟡 กลุ่มที่ 1: มีเครื่องรอการยืนยัน</strong>
+                  <span class="tag" style="background:#fef3c7; color:#92400e; font-weight:700;" id="seg1CountBadge">27 คน</span>
+                </div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+                  แจ้งเตือนให้เข้ามากดปุ่มเขียว [✅ ข้อมูลถูกต้อง] ใน 1 คลิก
+                </p>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn btn-secondary btn-sm" id="btnCopyReminderSeg1" style="flex: 1;">
+                    📋 คัดลอกข้อความกลุ่ม 1
+                  </button>
+                  <button class="btn btn-outline btn-sm" id="btnPreviewCardSeg1">
+                    👁️ ดูตัวอย่างการ์ด
+                  </button>
+                </div>
               </div>
 
-              <div style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 12px;">
-                <button class="btn btn-warning btn-block btn-sm" id="btnTriggerBatchBot">
-                  ⚡ รันส่งการ์ดทวงคนที่ยังไม่ยืนยันอัตโนมัติ (Batch Scheduler)
-                </button>
-                <div id="batchBotStatus" style="display: none; font-size: 0.75rem; margin-top: 6px; color: var(--text-muted);"></div>
+              <!-- Segment 2: People with ZERO devices in system -->
+              <div style="background: #ffffff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <strong style="color: #1e40af; font-size: 0.875rem;">🔴 กลุ่มที่ 2: ยังไม่มีเครื่องในระบบ (0 เครื่อง)</strong>
+                  <span class="tag" style="background:#dbeafe; color:#1e40af; font-weight:700;" id="seg2CountBadge">34 คน</span>
+                </div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+                  แจ้งเตือนว่ายังไม่พบเครื่อง หากมีโน้ตบุ๊ก/จอ ให้ไปแท็บ 2 เพื่อลงทะเบียนเครื่องใหม่
+                </p>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn btn-secondary btn-sm" id="btnCopyReminderSeg2" style="flex: 1;">
+                    📋 คัดลอกข้อความกลุ่ม 2
+                  </button>
+                  <button class="btn btn-outline btn-sm" id="btnPreviewCardSeg2">
+                    👁️ ดูตัวอย่างการ์ด
+                  </button>
+                </div>
+              </div>
+
+              <div class="copy-success" id="copySuccessMsg" style="display: none; margin-top: 8px; font-size: 0.8125rem;">
+                ✅ คัดลอกข้อความสำเร็จ! นำไปวางใน Lark Chat ได้ทันที
               </div>
             </div>
           </div>
@@ -649,7 +679,7 @@
             </div>
             <div class="bot-test-tool">
               <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 12px;">
-                ส่งการ์ดทดสอบแบบ 1-on-1 เข้าแชท Lark เพื่อตรวจสอบหน้าตาการ์ดและปุ่มกดยืนยันในแชท
+                ส่งการ์ดทดสอบแบบ 1-on-1 เข้าแชท Lark เพื่อตรวจสอบหน้าตาการ์ดและปุ่มกดยืนยันในแชท (ปลอดภัย ไม่รบกวนคนอื่น)
               </p>
               
               <div class="form-group" style="margin-bottom: 10px;">
@@ -662,7 +692,8 @@
               <div class="form-group" style="margin-bottom: 14px;">
                 <label for="botTestCardType" style="font-size: 0.75rem; font-weight: 600;">เลือกประเภทการ์ดที่ต้องการส่ง:</label>
                 <select id="botTestCardType" style="font-size: 0.875rem; padding: 8px 12px;">
-                  <option value="verification">🚨 การ์ดทวงยืนยันเครื่อง 7 วัน (มีปุ่มกดยืนยันในแชท 1 คลิก)</option>
+                  <option value="verification">🚨 การ์ดกลุ่ม 1: ทวงยืนยันเครื่อง 7 วัน (คนมีเครื่องรออยู่)</option>
+                  <option value="zero_device">📦 การ์ดกลุ่ม 2: แจ้งเตือนคนไม่มีเครื่องในระบบ (ลงทะเบียนใหม่)</option>
                   <option value="loan_due">⏰ การ์ดเตือนครบกำหนดส่งคืนอุปกรณ์ชั่วคราว</option>
                   <option value="loan_overdue">🚨 การ์ดเตือนเกินกำหนดส่งคืน (Overdue)</option>
                   <option value="receipt">🎉 การ์ดใบเสร็จยืนยันขึ้นทะเบียนใหม่สำเร็จ</option>

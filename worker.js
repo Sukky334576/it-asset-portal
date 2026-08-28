@@ -924,6 +924,27 @@ export default {
         });
       }
 
+      // Bot Send Test (Safe Dry-Run / Whitelist Guard)
+      if (pathname === "/api/admin/bot/send-test" && method === "POST") {
+        if (!requireAdmin(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED" }, 401);
+        const body = await request.json().catch(() => ({}));
+        const targetName = body.targetName || "พนักงานทดสอบ";
+        const targetOpenId = body.targetOpenId || "";
+        const cardType = body.cardType || "verification";
+        
+        return jsonResponse({
+          ok: true,
+          message: `[Sandbox Dry-Run] บอทจำลองการสร้างการ์ด (${cardType}) สำหรับ ${targetName} สำเร็จ (ไม่ส่งจริงตาม Safety Sandbox)`,
+          sendResult: {
+            success: true,
+            dryRun: true,
+            recipientId: targetOpenId,
+            recipientName: targetName,
+            cardType: cardType
+          }
+        });
+      }
+
       // Bot Config & Whitelist
       if (pathname === "/api/admin/bot/config" && method === "GET") {
         return jsonResponse({

@@ -1264,7 +1264,9 @@ app.post('/api/admin/bot/send-test', requireAdminAuth, async (req, res) => {
         }];
 
         let cardPayload = null;
-        if (cardType === 'loan_due') {
+        if (cardType === 'zero_device') {
+            cardPayload = larkBot.createZeroDeviceRegistrationCard(name, openId);
+        } else if (cardType === 'loan_due') {
             cardPayload = larkBot.createLoanDueCard(name, "Lenovo ThinkPad X280", "COM-00047", "2026-08-25", false, openId);
         } else if (cardType === 'loan_overdue') {
             cardPayload = larkBot.createLoanDueCard(name, "Dell 24 Monitor", "MO-00088", "2026-08-15", true, openId);

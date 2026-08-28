@@ -184,6 +184,58 @@ function createLoanDueCard(borrowerName, assetName, assetTag, returnDate, isOver
 }
 
 /**
+ * Card Template 4: Zero Device Registration / Exploration Card
+ */
+function createZeroDeviceRegistrationCard(employeeName, employeeId = '') {
+  const magicUrl = getMagicUrl(employeeName, employeeId);
+  return {
+    config: { wide_screen_mode: true },
+    header: {
+      template: "turquoise",
+      title: {
+        tag: "plain_text",
+        content: "📦 แจ้งเตือน: สำรวจ & ขึ้นทะเบียนอุปกรณ์ IT ประจำตัว (7-Day Freeze)"
+      }
+    },
+    elements: [
+      {
+        tag: "div",
+        text: {
+          tag: "lark_md",
+          content: `สวัสดีครับคุณ **${employeeName}** 👋\n\nขณะนี้บริษัทอยู่ในช่วง **7-Day Freeze Campaign** เพื่อสำรวจและจัดระเบียบอุปกรณ์คอมพิวเตอร์และจอประจำตัวของพนักงานทุกคนครับ\n\n🔍 **สถานะปัจจุบัน:** ระบบตรวจเช็กแล้วยัง **ไม่พบอุปกรณ์คอมพิวเตอร์หรือจอ** ผูกกับบัญชี Lark ของคุณในระบบกลาง`
+        }
+      },
+      {
+        tag: "div",
+        fields: [
+          {
+            is_short: false,
+            text: {
+              tag: "lark_md",
+              content: `• **หากคุณมีโน้ตบุ๊ก / จอคอม ประจำตัวที่ใช้งานอยู่:**\n👉 โปรดกดปุ่มด้านล่างเพื่อไปที่ **แท็บ 2 (ลงทะเบียนเครื่องใหม่)** แล้วกรอก Serial Number ใต้เครื่องขึ้นทะเบียนได้ทันทีครับ\n\n• **หากคุณไม่มีอุปกรณ์ประจำตัว (ใช้เครื่องกองกลาง หรือตำแหน่งที่ไม่ใช้อุปกรณ์คอมพิวเตอร์):**\n✅ ไม่ต้องดำเนินการใดๆ ครับ ถือว่าข้อมูลถูกต้องแล้วครับผม`
+            }
+          }
+        ]
+      },
+      {
+        tag: "action",
+        actions: [
+          {
+            tag: "button",
+            text: {
+              tag: "plain_text",
+              content: "➕ เข้าสู่ระบบเพื่อลงทะเบียนเครื่องใหม่ (เปิดบนเว็บ)"
+            },
+            type: "primary",
+            url: `${magicUrl}&tab=registerTab`
+          }
+        ]
+      }
+    ]
+  };
+}
+
+/**
  * Card Template 3: Registration / Loan Receipt Card
  */
 function createReceiptCard(employeeName, type = 'register', details = {}) {
@@ -321,6 +373,7 @@ module.exports = {
   verifyMagicToken,
   getMagicUrl,
   createVerificationCard,
+  createZeroDeviceRegistrationCard,
   createLoanDueCard,
   createReceiptCard,
   isRecipientAllowed,
