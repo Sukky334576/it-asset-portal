@@ -324,8 +324,11 @@ async function getEmployeeDeviceList() {
         if (empId === "ou_b1756acc400b9e0d575cbe53ff5480dc" || empName.toLowerCase() === "teeraphat") {
             empName = "Tle.Teeraphat";
         }
-        if (empId === "ou_f2d6832595326edf913a4ad0499718b8" || empName.toLowerCase().includes("patcharaporn") || empName.toLowerCase().includes("foam") || empName.toLowerCase().includes("freyah")) {
+        if (empId === "ou_b1e49e6d5a230cf75c3e402b75df9854" || empName.toLowerCase().includes("ployfreyah") || empName.toLowerCase().includes("freyah")) {
             empName = "PloyFreyah.Patcharaporn";
+        }
+        if (empId === "ou_f2d6832595326edf913a4ad0499718b8" || empName.toLowerCase().includes("foam")) {
+            empName = "Foam.Patcharaporn";
         }
 
         if (!employeeMap[empName]) {

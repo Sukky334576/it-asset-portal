@@ -2184,7 +2184,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const eLower = e.name.toLowerCase();
         if (eLower === targetName) return true;
         if (ssoUser.email && e.email && e.email.toLowerCase() === ssoUser.email.toLowerCase()) return true;
-        if (targetName.includes("patcharaporn") && (eLower.includes("patcharaporn") || eLower.includes("freyah") || eLower.includes("foam"))) return true;
+        if (targetName.includes("freyah") && eLower.includes("freyah")) return true;
+        if (targetName.includes("foam") && eLower.includes("foam")) return true;
         if (targetName.includes("teeraphat") && eLower.includes("teeraphat")) return true;
         return false;
       });
