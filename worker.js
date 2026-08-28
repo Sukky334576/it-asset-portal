@@ -477,11 +477,34 @@ export default {
         });
       }
 
-      // ---------------- TEMPORARY LOANS ---------------- //
-
       if (pathname === "/api/loans" && method === "GET") {
-        const records = await lark.fetchRecords(TABLE_LOAN);
-        return jsonResponse({ ok: true, count: records.length, data: records });
+        const [assets, loans] = await Promise.all([
+          lark.fetchRecords(TABLE_MASTER),
+          lark.fetchRecords(TABLE_LOAN)
+        ]);
+
+        const availableStock = assets.filter(a => {
+          const status = getSingleValue(a["Status (สถานะอุปกรณ์)"]) || "";
+          return status.includes("พร้อมใช้งาน") || status.includes("Available") || status.includes("สำรองในคลัง") || status.includes("Central Stock") || status.includes("พร้อมให้ยืม");
+        });
+
+        const activeLoans = assets.filter(a => {
+          const status = getSingleValue(a["Status (สถานะอุปกรณ์)"]) || "";
+          return status.includes("ยืม") || status.includes("On Loan");
+        });
+
+        const returnHistory = loans.filter(l => {
+          const status = getSingleValue(l["Loan Status (สถานะการยืม-คืน)"]) || "";
+          return status.includes("Returned") || status.includes("คืน");
+        });
+
+        return jsonResponse({
+          ok: true,
+          availableStock,
+          activeLoans,
+          returnHistory,
+          rawLoans: loans
+        });
       }
 
       if (pathname === "/api/loans/borrow" && method === "POST") {
