@@ -241,6 +241,9 @@ export default {
           if (openId === "ou_b1756acc400b9e0d575cbe53ff5480dc" || empName.toLowerCase().includes("teeraphat")) {
             empName = "Tle.Teeraphat";
           }
+          if (openId === "ou_f2d6832595326edf913a4ad0499718b8" || email.toLowerCase().includes("patcharaporn") || empName.toLowerCase().includes("patcharaporn") || empName.toLowerCase().includes("freyah") || empName.toLowerCase().includes("foam")) {
+            empName = "PloyFreyah.Patcharaporn";
+          }
 
           if (!employeeMap[empName]) {
             const isResigned = empName.includes("(ลาออก)") || empName.includes("Closed") || resignedNames.includes(empName);

@@ -2182,7 +2182,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const found = state.employees.find(e => {
         if (targetOpenId && e.id === targetOpenId) return true;
         const eLower = e.name.toLowerCase();
-        return eLower === targetName || (ssoUser.email && e.email && e.email.toLowerCase() === ssoUser.email.toLowerCase());
+        if (eLower === targetName) return true;
+        if (ssoUser.email && e.email && e.email.toLowerCase() === ssoUser.email.toLowerCase()) return true;
+        if (targetName.includes("patcharaporn") && (eLower.includes("patcharaporn") || eLower.includes("freyah") || eLower.includes("foam"))) return true;
+        if (targetName.includes("teeraphat") && eLower.includes("teeraphat")) return true;
+        return false;
       });
 
       if (found) {
