@@ -371,12 +371,18 @@ export default {
             return existingTag.toLowerCase() === cleanTag.toLowerCase();
           });
           if (found) {
+            const statusStr = getSingleValue(found["Status (สถานะอุปกรณ์)"]) || "";
+            const holderStr = getHolderName(found["Current Holder (ผู้ถือครองปัจจุบัน)"]);
+            const isStock = statusStr.includes("สำรองในคลัง") || statusStr.includes("Central Stock") || !holderStr || holderStr.includes("ส่วนกลาง");
+
             tagConflict = {
               record_id: found.record_id,
               assetTag: found["Asset Tag (เลขทรัพย์สิน)"],
               deviceName: found["Device Name (ชื่อรุ่น/อุปกรณ์)"],
-              holder: getHolderName(found["Current Holder (ผู้ถือครองปัจจุบัน)"]),
-              organization: getSingleValue(found["Organization (สังกัด)"])
+              holder: holderStr || "ส่วนกลาง (Central Stock)",
+              organization: getSingleValue(found["Organization (สังกัด)"]),
+              status: statusStr,
+              canClaim: isStock
             };
           }
         }
@@ -388,21 +394,68 @@ export default {
             return existingSN.toLowerCase() === cleanSN.toLowerCase();
           });
           if (found) {
+            const statusStr = getSingleValue(found["Status (สถานะอุปกรณ์)"]) || "";
+            const holderStr = getHolderName(found["Current Holder (ผู้ถือครองปัจจุบัน)"]);
+            const isStock = statusStr.includes("สำรองในคลัง") || statusStr.includes("Central Stock") || !holderStr || holderStr.includes("ส่วนกลาง");
+
             snConflict = {
               record_id: found.record_id,
               serialNumber: found["Serial Number (S/N)"],
               deviceName: found["Device Name (ชื่อรุ่น/อุปกรณ์)"],
-              holder: getHolderName(found["Current Holder (ผู้ถือครองปัจจุบัน)"]),
-              organization: getSingleValue(found["Organization (สังกัด)"])
+              holder: holderStr || "ส่วนกลาง (Central Stock)",
+              organization: getSingleValue(found["Organization (สังกัด)"]),
+              status: statusStr,
+              canClaim: isStock
             };
           }
         }
 
+        const conflict = snConflict || tagConflict;
+        const canClaim = Boolean(conflict && conflict.canClaim);
+
         return jsonResponse({
           ok: true,
           hasConflict: !!(tagConflict || snConflict),
+          canClaim,
+          claimRecordId: conflict ? conflict.record_id : null,
           tagConflict,
           snConflict
+        });
+      }
+
+      // Claim / Transfer Central Stock Device to Me
+      if (pathname === "/api/assets/claim" && method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const { assetRecordId, employeeName, employeeId, organization, condition, notes } = body;
+
+        if (!assetRecordId || !employeeName) {
+          return jsonResponse({ ok: false, message: "กรุณาระบุข้อมูลอุปกรณ์และชื่อผู้ถือครอง" }, 400);
+        }
+
+        const updateFields = {
+          "Status (สถานะอุปกรณ์)": "🟢 ใช้งานประจำตัว (In Use)",
+          "Audit Status (สถานะการยืนยัน)": "🟢 ยืนยันแล้ว (Verified)",
+          "Organization (สังกัด)": organization || "XPO",
+          "Specs / Notes (รายละเอียด/หมายเหตุ)": notes ? `เคลมรับเครื่องประจำตัว: ${notes}` : `เคลมรับเครื่องประจำตัวโดย ${employeeName}`
+        };
+
+        if (employeeId && String(employeeId).startsWith("ou_")) {
+          updateFields["Current Holder (ผู้ถือครองปัจจุบัน)"] = [{ id: employeeId }];
+        } else {
+          updateFields["Current Holder (ผู้ถือครองปัจจุบัน)"] = [{ name: employeeName }];
+        }
+
+        await lark.updateRecord(TABLE_MASTER, assetRecordId, updateFields);
+
+        await lark.createRecord(TABLE_AUDIT, {
+          "Brand & Model (ยี่ห้อและรุ่น)": `เคลมรับเครื่องประจำตัว`,
+          "IT Review Status (ผลการตรวจสอบโดย IT)": "🟢 ยืนยันแล้ว (Verified)",
+          "Notes (หมายเหตุจากพนักงาน)": `พนักงาน ${employeeName} กดรับโอน/เคลมเครื่องรหัส ${assetRecordId} เข้าเป็นเครื่องประจำตัว`
+        }).catch(() => null);
+
+        return jsonResponse({
+          ok: true,
+          message: "🎉 โอนเครื่องเข้าเป็นทรัพย์สินประจำตัวของคุณเรียบร้อยแล้ว!"
         });
       }
 

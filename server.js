@@ -914,6 +914,45 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
+// Claim / Transfer Central Stock Device to Me
+app.post('/api/assets/claim', async (req, res) => {
+    try {
+        const { assetRecordId, employeeName, employeeId, organization, condition, notes } = req.body;
+        if (!assetRecordId || !employeeName) {
+            return res.status(400).json({ ok: false, message: "กรุณาระบุข้อมูลอุปกรณ์และชื่อผู้ถือครอง" });
+        }
+
+        const userObj = await resolveLarkUser(employeeId || employeeName);
+        const updatePayload = {
+            fields: {
+                "Current Holder (ผู้ถือครองปัจจุบัน)": userObj,
+                "Status (สถานะอุปกรณ์)": "🟢 ใช้งานประจำตัว (In Use)",
+                "Audit Status (สถานะการยืนยัน)": "🟢 ยืนยันแล้ว (Verified)",
+                "Organization (สังกัด)": organization || "XPO",
+                "Specs / Notes (รายละเอียด/หมายเหตุ)": notes ? `เคลมรับเครื่องประจำตัว: ${notes}` : `เคลมรับเครื่องประจำตัวโดย ${employeeName}`
+            }
+        };
+
+        await runLarkCli([
+            "base", "+record-update",
+            "--base-token", BASE_TOKEN,
+            "--table-id", TABLE_MASTER,
+            "--record-id", assetRecordId,
+            "--as", "user",
+            "--json", JSON.stringify(updatePayload)
+        ]);
+
+        lastFetchTime = 0;
+
+        res.json({
+            ok: true,
+            message: "🎉 โอนเครื่องเข้าเป็นทรัพย์สินประจำตัวของคุณเรียบร้อยแล้ว!"
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
 // Add Central Stock Asset (Admin Only)
 app.post('/api/admin/stock/add', requireAdminAuth, async (req, res) => {
     try {

@@ -1189,14 +1189,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (res.hasConflict) {
           let conflictMsg = [];
-          if (res.tagConflict) {
-            conflictMsg.push(`🏷️ <strong>เลขทรัพย์สิน '${res.tagConflict.assetTag}'</strong> ถูกบันทึกไว้แล้วในระบบ (ถือครองโดย <strong>${res.tagConflict.holder}</strong> - ${res.tagConflict.deviceName})`);
-          }
-          if (res.snConflict) {
-            conflictMsg.push(`🔍 <strong>Serial Number '${res.snConflict.serialNumber}'</strong> ตรงกับเครื่องของ <strong>${res.snConflict.holder}</strong>`);
+          if (res.canClaim && res.claimRecordId) {
+            conflictMsg.push(`
+              <div style="margin-bottom: 8px;">
+                💡 ตรวจพบเครื่องนี้ในระบบ (<strong>${res.snConflict?.deviceName || res.tagConflict?.deviceName || 'อุปกรณ์ IT'}</strong> | S/N: <code>${res.snConflict?.serialNumber || sn || '-'}</code>) สถานะปัจจุบัน: <strong>สำรองในคลังส่วนกลาง</strong>
+              </div>
+              <button type="button" class="btn btn-success btn-sm" id="btnOneClickClaimDuplicate" data-id="${res.claimRecordId}" style="background: #059669; border-color: #047857; font-weight: 600; padding: 6px 14px; box-shadow: 0 2px 4px rgba(5,150,105,0.2);">
+                🙋‍♂️ ฉันกำลังใช้งานเครื่องนี้อยู่ (โอนเข้าชื่อฉันทันที 1 คลิก)
+              </button>
+            `);
+          } else {
+            if (res.tagConflict) {
+              conflictMsg.push(`🏷️ <strong>เลขทรัพย์สิน '${res.tagConflict.assetTag}'</strong> ถูกบันทึกไว้แล้วในระบบ (ถือครองโดย <strong>${res.tagConflict.holder}</strong> - ${res.tagConflict.deviceName})`);
+            }
+            if (res.snConflict) {
+              conflictMsg.push(`🔍 <strong>Serial Number '${res.snConflict.serialNumber}'</strong> ตรงกับเครื่องของ <strong>${res.snConflict.holder}</strong>`);
+            }
           }
           elements.duplicateAlertText.innerHTML = conflictMsg.join("<br>");
           elements.duplicateAlertBanner.style.display = 'flex';
+
+          const claimBtn = document.getElementById('btnOneClickClaimDuplicate');
+          if (claimBtn) {
+            claimBtn.addEventListener('click', async () => {
+              const currentEmp = state.selectedEmployee || state.ssoUser;
+              if (!currentEmp || !currentEmp.name) {
+                showToast("กรุณาเข้าสู่ระบบก่อนรับโอนเครื่อง", "warning");
+                return;
+              }
+              claimBtn.disabled = true;
+              claimBtn.textContent = "กำลังโอนเครื่อง...";
+              try {
+                const claimRes = await fetch('/api/assets/claim', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    assetRecordId: res.claimRecordId,
+                    employeeName: currentEmp.name,
+                    employeeId: currentEmp.id || currentEmp.open_id,
+                    organization: currentEmp.organization || 'XPO'
+                  })
+                }).then(r => r.json());
+
+                if (claimRes.ok) {
+                  showToast("🎉 โอนเครื่องเข้าเป็นทรัพย์สินของคุณและยืนยันเรียบร้อยแล้ว!", "success");
+                  elements.newAssetForm.reset();
+                  elements.duplicateAlertBanner.style.display = 'none';
+                  await loadAllData(true);
+                  const tab1 = document.querySelector('.tab-btn[data-tab="verifyTab"]');
+                  if (tab1) tab1.click();
+                } else {
+                  showToast(claimRes.message || "โอนเครื่องไม่สำเร็จ", "error");
+                }
+              } catch (err) {
+                showToast("เชื่อมต่อขัดข้อง: " + err.message, "error");
+              } finally {
+                claimBtn.disabled = false;
+              }
+            });
+          }
         } else {
           elements.duplicateAlertBanner.style.display = 'none';
         }
@@ -1338,9 +1389,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
               </div>
             </div>
-            <button class="btn btn-primary btn-sm btn-borrow-this" data-id="${item.record_id}" data-name="${name}">
-              ⚡ ขอยืมอุปกรณ์นี้
-            </button>
+            <div style="display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;">
+              <button class="btn btn-secondary btn-sm btn-borrow-this" data-id="${item.record_id}" data-name="${name}" style="flex: 1; font-size: 0.75rem; padding: 6px 8px;">
+                ⚡ ขอยืมชั่วคราว
+              </button>
+              <button class="btn btn-success btn-sm btn-claim-this" data-id="${item.record_id}" data-name="${name}" data-tag="${tag}" style="flex: 1.2; font-size: 0.75rem; padding: 6px 8px; background: #059669; border-color: #047857; font-weight: 600;">
+                🙋‍♂️ ฉันกำลังใช้เครื่องนี้
+              </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -1350,6 +1406,52 @@ document.addEventListener('DOMContentLoaded', () => {
           const id = btn.getAttribute('data-id');
           document.querySelector('[data-subtab="subBorrowForm"]').click();
           elements.loanAssetSelect.value = id;
+        });
+      });
+
+      elements.availableStockGrid.querySelectorAll('.btn-claim-this').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          const name = btn.getAttribute('data-name');
+          const tag = btn.getAttribute('data-tag');
+
+          const currentEmp = state.selectedEmployee || state.ssoUser;
+          if (!currentEmp || !currentEmp.name) {
+            showToast("กรุณาเข้าสู่ระบบด้วย Lark SSO ก่อนกดยืนยันรับเครื่อง", "warning");
+            return;
+          }
+
+          if (!confirm(`คุณต้องการรับ "${name}" (เลขทรัพย์สิน: ${tag}) เข้าเป็นอุปกรณ์ประจำตัวของคุณ (${currentEmp.name}) ใช่หรือไม่?`)) return;
+
+          btn.disabled = true;
+          btn.textContent = "กำลังรับเครื่อง...";
+
+          try {
+            const res = await fetch('/api/assets/claim', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                assetRecordId: id,
+                employeeName: currentEmp.name,
+                employeeId: currentEmp.id || currentEmp.open_id,
+                organization: currentEmp.organization || 'XPO'
+              })
+            }).then(r => r.json());
+
+            if (res.ok) {
+              showToast("🎉 รับเครื่องเข้าเป็นทรัพย์สินประจำตัวของคุณเรียบร้อยแล้ว!", "success");
+              await loadAllData(true);
+              const tab1 = document.querySelector('.tab-btn[data-tab="verifyTab"]');
+              if (tab1) tab1.click();
+            } else {
+              showToast(res.message || "เกิดข้อผิดพลาดในการรับเครื่อง", "error");
+            }
+          } catch (err) {
+            showToast(`เชื่อมต่อขัดข้อง: ${err.message}`, "error");
+          } finally {
+            btn.disabled = false;
+            btn.textContent = "🙋‍♂️ ฉันกำลังใช้เครื่องนี้";
+          }
         });
       });
     }
