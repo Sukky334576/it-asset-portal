@@ -353,6 +353,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return val || "";
   }
 
+  function getSafeHolderName(holder, defaultVal = "ส่วนกลาง (Central Stock)") {
+    if (!holder) return defaultVal;
+    if (Array.isArray(holder) && holder.length > 0 && holder[0]) {
+      return holder[0].name || holder[0].en_name || holder[0].id || defaultVal;
+    }
+    if (typeof holder === 'object' && holder && holder.name) {
+      return holder.name || holder.en_name || holder.id || defaultVal;
+    }
+    if (typeof holder === 'string') return holder;
+    return defaultVal;
+  }
+
   function getDeviceIcon(type) {
     const t = (type || "").toLowerCase();
     if (t.includes('laptop') || t.includes('nb')) return '💻';
@@ -1467,9 +1479,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const todayStr = new Date().toISOString().split('T')[0];
       elements.activeLoansTbody.innerHTML = active.map(item => {
         const holder = item["Current Holder (ผู้ถือครองปัจจุบัน)"];
-        let holderName = "-";
-        if (Array.isArray(holder) && holder[0]) holderName = holder[0].name || holder[0].id;
-        else if (typeof holder === 'object' && holder.name) holderName = holder.name;
+        let holderName = getSafeHolderName(holder, "-");
 
         // Parse expected return date from notes or default
         const notes = item["Specs / Notes (รายละเอียด/หมายเหตุ)"] || "";
@@ -1803,9 +1813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       elements.missingTagTbody.innerHTML = missingList.map(item => {
         const holder = item["Current Holder (ผู้ถือครองปัจจุบัน)"];
-        let holderName = "ไม่ระบุ";
-        if (Array.isArray(holder) && holder[0]) holderName = holder[0].name || holder[0].id;
-        else if (typeof holder === 'object' && holder.name) holderName = holder.name;
+        const holderName = getSafeHolderName(holder, "ส่วนกลาง (Central Stock)");
 
         return `
           <tr>
@@ -1857,10 +1865,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const rows = [];
       // 1. Employee reported
       res.reportedList.forEach(item => {
-        let holderName = "ไม่ระบุ";
         const h = item["Current Holder (ผู้ถือครองปัจจุบัน)"];
-        if (Array.isArray(h) && h[0]) holderName = h[0].name || h[0].id;
-        else if (typeof h === 'object' && h.name) holderName = h.name;
+        const holderName = getSafeHolderName(h, "ส่วนกลาง (Central Stock)");
 
         rows.push(`
           <tr style="background: #fff5f5;">
@@ -1882,10 +1888,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // 2. Auto-detected S/N groups
       res.detectedSnGroups.forEach(grp => {
         grp.items.forEach((item, idx) => {
-          let holderName = "ไม่ระบุ";
           const h = item["Current Holder (ผู้ถือครองปัจจุบัน)"];
-          if (Array.isArray(h) && h[0]) holderName = h[0].name || h[0].id;
-          else if (typeof h === 'object' && holderName) holderName = h.name;
+          const holderName = getSafeHolderName(h, "ส่วนกลาง (Central Stock)");
 
           const isKeepCandidate = idx === 0;
           rows.push(`
