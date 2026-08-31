@@ -373,7 +373,7 @@ export default {
           if (found) {
             const statusStr = getSingleValue(found["Status (สถานะอุปกรณ์)"]) || "";
             const holderStr = getHolderName(found["Current Holder (ผู้ถือครองปัจจุบัน)"]);
-            const isStock = statusStr.includes("สำรองในคลัง") || statusStr.includes("Central Stock") || !holderStr || holderStr.includes("ส่วนกลาง");
+            const isStock = statusStr.includes("สำรองในคลัง") || statusStr.includes("Central Stock") || statusStr.includes("รอจัดสรร") || statusStr.includes("Pending Handover") || !holderStr || holderStr.includes("ส่วนกลาง");
 
             tagConflict = {
               record_id: found.record_id,
@@ -396,7 +396,7 @@ export default {
           if (found) {
             const statusStr = getSingleValue(found["Status (สถานะอุปกรณ์)"]) || "";
             const holderStr = getHolderName(found["Current Holder (ผู้ถือครองปัจจุบัน)"]);
-            const isStock = statusStr.includes("สำรองในคลัง") || statusStr.includes("Central Stock") || !holderStr || holderStr.includes("ส่วนกลาง");
+            const isStock = statusStr.includes("สำรองในคลัง") || statusStr.includes("Central Stock") || statusStr.includes("รอจัดสรร") || statusStr.includes("Pending Handover") || !holderStr || holderStr.includes("ส่วนกลาง");
 
             snConflict = {
               record_id: found.record_id,
@@ -583,7 +583,8 @@ export default {
 
         const availableStock = assets.filter(a => {
           const status = getSingleValue(a["Status (สถานะอุปกรณ์)"]) || "";
-          return status.includes("พร้อมใช้งาน") || status.includes("Available") || status.includes("สำรองในคลัง") || status.includes("Central Stock") || status.includes("พร้อมให้ยืม");
+          if (status.includes("รอจัดสรร") || status.includes("Pending Handover") || status.includes("รอผู้ถือครองใหม่")) return false;
+          return status.includes("พร้อมใช้งาน") || status.includes("Available") || status.includes("พร้อมให้ยืม");
         });
 
         const activeLoans = assets.filter(a => {
