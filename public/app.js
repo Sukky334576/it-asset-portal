@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     stockCatFilter: 'ALL',
     duplicateCheckTimeout: null,
     userSearchTimeout: null,
+    byodMap: {},
     isAdminLoggedIn: false
   };
 
@@ -166,10 +167,13 @@ document.addEventListener('DOMContentLoaded', () => {
     statLivePendingPct: document.getElementById('statLivePendingPct'),
     statLiveVerifiedCount: document.getElementById('statLiveVerifiedCount'),
     statLiveVerifiedPct: document.getElementById('statLiveVerifiedPct'),
+    statLiveByodCount: document.getElementById('statLiveByodCount'),
+    statLiveByodPct: document.getElementById('statLiveByodPct'),
     statLiveTotalCount: document.getElementById('statLiveTotalCount'),
     liveMonitorFilterPills: document.getElementById('liveMonitorFilterPills'),
     pillPendingCount: document.getElementById('pillPendingCount'),
     pillZeroCount: document.getElementById('pillZeroCount'),
+    pillByodCount: document.getElementById('pillByodCount'),
     pillVerifiedCount: document.getElementById('pillVerifiedCount'),
     pillAllCount: document.getElementById('pillAllCount'),
     liveMonitorSearchInput: document.getElementById('liveMonitorSearchInput'),
@@ -178,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cardFilterZero: document.getElementById('cardFilterZero'),
     cardFilterPending: document.getElementById('cardFilterPending'),
     cardFilterVerified: document.getElementById('cardFilterVerified'),
+    cardFilterByod: document.getElementById('cardFilterByod'),
     cardFilterAll: document.getElementById('cardFilterAll'),
 
     // Add Central Stock Elements
@@ -687,17 +692,19 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       elements.syncText.textContent = "กำลังซิงก์ข้อมูลจาก Lark Base...";
       
-      const [empRes, assetsRes, loansRes, adminRes] = await Promise.all([
+      const [empRes, assetsRes, loansRes, adminRes, byodRes] = await Promise.all([
         fetch(`/api/employees${force ? '?refresh=true' : ''}`).then(r => r.json()),
         fetch(`/api/assets${force ? '?refresh=true' : ''}`).then(r => r.json()),
         fetch(`/api/loans${force ? '?refresh=true' : ''}`).then(r => r.json()),
-        state.isAdminLoggedIn ? adminFetch(`/api/admin/stats`).then(r => r.json()).catch(() => null) : Promise.resolve(null)
+        state.isAdminLoggedIn ? adminFetch(`/api/admin/stats`).then(r => r.json()).catch(() => null) : Promise.resolve(null),
+        fetch(`/api/byod/list`).then(r => r.json()).catch(() => ({}))
       ]);
 
       if (empRes && empRes.ok) state.employees = empRes.data;
       if (assetsRes && assetsRes.ok) state.assets = assetsRes.data;
       if (loansRes && loansRes.ok) state.loans = loansRes;
       if (adminRes && adminRes.ok) state.adminStats = adminRes;
+      if (byodRes && byodRes.ok) state.byodMap = byodRes.byodMap || {};
 
       if (state.isAdminLoggedIn) {
         renderAdminStats();
@@ -911,6 +918,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderEmployeeDevices(devices) {
     if (!devices || devices.length === 0) {
+      const emp = state.selectedEmployee;
+      const isByod = emp && state.byodMap && (
+        state.byodMap[emp.id] || 
+        state.byodMap[emp.name] || 
+        Object.values(state.byodMap).some(b => b.openId === emp.id || b.name === emp.name)
+      );
+
+      if (isByod) {
+        if (elements.profileVerifyStatus) {
+          elements.profileVerifyStatus.textContent = '🟣 ใช้อุปกรณ์ส่วนตัว (BYOD)';
+          elements.profileVerifyStatus.className = 'tag tag-verify-status byod';
+          elements.profileVerifyStatus.style.background = '#ede9fe';
+          elements.profileVerifyStatus.style.color = '#6d28d9';
+        }
+        if (elements.btnConfirmAll) elements.btnConfirmAll.style.display = 'none';
+
+        elements.employeeDeviceGrid.innerHTML = `
+          <div style="grid-column: 1 / -1; background: #faf5ff; padding: 3rem 2rem; border-radius: var(--radius-lg); text-align: center; border: 2px solid #d8b4fe; box-shadow: var(--shadow-sm); margin-top: 1rem;">
+            <div style="font-size: 3.5rem; margin-bottom: 0.75rem;">🟣📱</div>
+            <h3 style="font-size: 1.35rem; font-weight: 700; color: #581c87; margin: 0 0 0.5rem;">คุณได้ยืนยันสถานะ "ใช้อุปกรณ์ส่วนตัว 100% (BYOD)" แล้ว</h3>
+            <p style="color: #7e22ce; font-size: 0.95rem; max-width: 540px; margin: 0 auto 1.5rem; line-height: 1.6;">
+              ระบบบันทึกเรียบร้อยแล้วว่าคุณไม่ได้ถือครองทรัพย์สินหรืออุปกรณ์คอมพิวเตอร์ของบริษัท และจะ<strong>ไม่มีการส่งแจ้งเตือนติดตามเครื่อง</strong>ไปยัง Lark ของคุณอีกครับ
+            </p>
+            <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+              <button class="btn btn-secondary btn-sm" id="btnRevokeSelfByod" style="padding: 8px 16px; font-size: 0.8125rem;">
+                🔄 เปลี่ยนแปลงสถานะ (หากได้รับเครื่องของบริษัทในภายหลัง)
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btnRevokeSelfByod')?.addEventListener('click', async () => {
+          if (!confirm("คุณต้องการยกเลิกสถานะ BYOD และกลับไปสู่การตรวจสอบอุปกรณ์ใช่หรือไม่?")) return;
+          try {
+            const res = await fetch('/api/byod/revoke', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ openId: emp?.id, name: emp?.name })
+            }).then(r => r.json());
+            if (res.ok) {
+              if (state.byodMap) {
+                if (emp?.id) delete state.byodMap[emp.id];
+                if (emp?.name) delete state.byodMap[emp.name];
+              }
+              showToast("ยกเลิกสถานะ BYOD เรียบร้อยแล้ว", "info");
+              renderEmployeeDevices([]);
+            }
+          } catch (e) {
+            showToast(e.message, "error");
+          }
+        });
+        return;
+      }
+
       elements.employeeDeviceGrid.innerHTML = `
         <div style="grid-column: 1 / -1; background: white; padding: 3rem 2rem; border-radius: var(--radius-lg); text-align: center; border: 2px dashed #cbd5e1; box-shadow: var(--shadow-sm); margin-top: 1rem;">
           <div style="font-size: 3rem; margin-bottom: 0.75rem;">📦</div>
@@ -918,11 +979,58 @@ document.addEventListener('DOMContentLoaded', () => {
           <p style="color: #64748b; font-size: 0.95rem; max-width: 500px; margin: 0 auto 1.5rem; line-height: 1.5;">
             ขณะนี้ยังไม่มีอุปกรณ์ IT (Laptop, PC, Monitor) ผูกอยู่กับบัญชี Lark นี้ หากคุณมีอุปกรณ์ประจำตัวที่ใช้งานอยู่ สามารถกดลงทะเบียนเพิ่มได้ทันทีครับ
           </p>
-          <button class="btn btn-primary btn-lg" onclick="document.querySelector('[data-tab=\\'registerTab\\']').click()" style="padding: 12px 28px; font-weight: 700; border-radius: 10px;">
-            ➕ ลงทะเบียนอุปกรณ์ใหม่ประจำตัวคุณ
-          </button>
+          <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-lg" onclick="document.querySelector('[data-tab=\\'registerTab\\']').click()" style="padding: 12px 28px; font-weight: 700; border-radius: 10px;">
+              ➕ ลงทะเบียนอุปกรณ์ใหม่ประจำตัวคุณ
+            </button>
+          </div>
+
+          <!-- BYOD Option Section -->
+          <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed #e2e8f0; max-width: 540px; margin-left: auto; margin-right: auto;">
+            <div style="background: #faf5ff; border: 1px solid #d8b4fe; border-radius: 12px; padding: 18px; text-align: center;">
+              <div style="font-size: 1.6rem; margin-bottom: 6px;">💻📱</div>
+              <div style="font-weight: 700; color: #581c87; font-size: 1rem; margin-bottom: 6px;">หรือคุณทำงานโดยใช้อุปกรณ์ส่วนตัว 100% (BYOD)?</div>
+              <p style="font-size: 0.8125rem; color: #6b21a8; margin-bottom: 14px; line-height: 1.5;">
+                หากคุณไม่ได้ใช้อุปกรณ์ของบริษัทเลย สามารถกดยืนยันสถานะได้ทันทีครับ ระบบจะบันทึกว่าคุณไม่มีอุปกรณ์บริษัท และ<strong>หยุดส่งข้อความแจ้งเตือนติดตามเครื่อง</strong>ไปยัง Lark ของคุณครับ
+              </p>
+              <button class="btn" id="btnDeclareSelfByod" style="background: #7c3aed; color: #ffffff; border: none; font-weight: 700; padding: 10px 24px; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);">
+                ✅ ฉันใช้อุปกรณ์ส่วนตัว 100% (ไม่มีเครื่องบริษัท)
+              </button>
+            </div>
+          </div>
         </div>
       `;
+
+      document.getElementById('btnDeclareSelfByod')?.addEventListener('click', async () => {
+        if (!emp) return;
+        if (!confirm(`คุณต้องการยืนยันว่า ${emp.name} ทำงานโดยใช้อุปกรณ์ส่วนตัว 100% และไม่มีอุปกรณ์คอมพิวเตอร์หรือจอของบริษัทใช่หรือไม่?`)) return;
+
+        try {
+          const btn = document.getElementById('btnDeclareSelfByod');
+          btn.disabled = true;
+          btn.textContent = "กำลังบันทึกข้อมูล...";
+
+          const res = await fetch('/api/byod/declare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ openId: emp.id, name: emp.name, email: emp.email })
+          }).then(r => r.json());
+
+          if (res.ok) {
+            showToast(res.message || "บันทึกสถานะ BYOD เรียบร้อยแล้ว", "success");
+            if (!state.byodMap) state.byodMap = {};
+            if (emp.id) state.byodMap[emp.id] = res.data;
+            if (emp.name) state.byodMap[emp.name] = res.data;
+            renderEmployeeDevices([]);
+          } else {
+            showToast(res.message || "เกิดข้อผิดพลาด", "error");
+            btn.disabled = false;
+            btn.textContent = "✅ ฉันใช้อุปกรณ์ส่วนตัว 100% (ไม่มีเครื่องบริษัท)";
+          }
+        } catch (e) {
+          showToast(e.message, "error");
+        }
+      });
       return;
     }
 
@@ -1854,10 +1962,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.statLiveVerifiedCount) elements.statLiveVerifiedCount.textContent = s.verifiedCount;
         if (elements.statLiveVerifiedPct) elements.statLiveVerifiedPct.textContent = `เสร็จสิ้นสมบูรณ์ ${s.verifiedPct}%`;
 
+        if (elements.statLiveByodCount) elements.statLiveByodCount.textContent = s.byodCount || 0;
+        if (elements.statLiveByodPct) elements.statLiveByodPct.textContent = `ยกเว้นติดตาม ${s.byodPct || 0}%`;
+
         if (elements.statLiveTotalCount) elements.statLiveTotalCount.textContent = `${s.totalActive} คน`;
 
         if (elements.pillPendingCount) elements.pillPendingCount.textContent = s.unverifiedCount;
         if (elements.pillZeroCount) elements.pillZeroCount.textContent = s.zeroDeviceCount;
+        if (elements.pillByodCount) elements.pillByodCount.textContent = s.byodCount || 0;
         if (elements.pillVerifiedCount) elements.pillVerifiedCount.textContent = s.verifiedCount;
         if (elements.pillAllCount) elements.pillAllCount.textContent = s.totalActive;
 
@@ -1885,12 +1997,15 @@ document.addEventListener('DOMContentLoaded', () => {
       list = (liveMonitorData.unverifiedList || []).map(u => ({ ...u, rowType: 'PENDING' }));
     } else if (currentMonitorFilter === 'ZERO') {
       list = (liveMonitorData.zeroDeviceList || []).map(u => ({ ...u, rowType: 'ZERO' }));
+    } else if (currentMonitorFilter === 'BYOD') {
+      list = (liveMonitorData.byodList || []).map(u => ({ ...u, rowType: 'BYOD' }));
     } else if (currentMonitorFilter === 'VERIFIED') {
       list = (liveMonitorData.verifiedList || []).map(u => ({ ...u, rowType: 'VERIFIED' }));
     } else {
       list = [
         ...(liveMonitorData.unverifiedList || []).map(u => ({ ...u, rowType: 'PENDING' })),
         ...(liveMonitorData.zeroDeviceList || []).map(u => ({ ...u, rowType: 'ZERO' })),
+        ...(liveMonitorData.byodList || []).map(u => ({ ...u, rowType: 'BYOD' })),
         ...(liveMonitorData.verifiedList || []).map(u => ({ ...u, rowType: 'VERIFIED' })),
         ...(liveMonitorData.directorList || []).map(u => ({ ...u, rowType: 'DIRECTOR' }))
       ];
@@ -1919,12 +2034,24 @@ document.addEventListener('DOMContentLoaded', () => {
         badgeHtml = `<span class="tag" style="background:#f1f5f9; color:#475569; font-weight:600;">👑 กรรมการบริษัท</span>`;
         devicesHtml = `<span style="color:#64748b; font-size:0.8125rem;">ยกเว้นการตรวจสอบตามนโยบาย</span>`;
         actionBtnHtml = `<span style="color:#94a3b8; font-size:0.75rem; font-weight:600; display:block; text-align:center;">🛡️ ไม่ส่งแจ้งเตือน</span>`;
+      } else if (u.rowType === 'BYOD') {
+        badgeHtml = `<span class="tag" style="background:#ede9fe; color:#6d28d9; font-weight:600;">🟣 เครื่องส่วนตัว (BYOD)</span>`;
+        devicesHtml = `<span style="color:#6d28d9; font-size:0.8125rem;">📱 ยืนยันแล้ว: ไม่ได้เบิกใช้อุปกรณ์ของบริษัท</span>`;
+        actionBtnHtml = `
+          <div style="font-size:0.75rem; color:#7c3aed; font-weight:600; margin-bottom:4px; text-align:center;">🛡️ ไม่ส่งแจ้งเตือน</div>
+          <button class="btn btn-sm btn-revoke-byod" data-openid="${u.openId}" data-name="${u.name}" style="padding: 2px 8px; font-size: 0.7rem; background: #fff; color: #64748b; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; width: 100%;">
+            🔄 ปลดสถานะ BYOD
+          </button>
+        `;
       } else if (u.rowType === 'ZERO') {
         badgeHtml = `<span class="tag" style="background:#fee2e2; color:#b91c1c; font-weight:600;">🔴 ยังไม่ลงทะเบียน</span>`;
         devicesHtml = `<span style="color:#94a3b8; font-size:0.8125rem;">ยังไม่มีรายการอุปกรณ์ในระบบ (0 ชิ้น)</span>`;
         actionBtnHtml = `
           <button class="btn btn-sm btn-primary btn-nudge-employee" data-openid="${u.openId}" data-name="${u.name}" data-type="REGISTER" style="padding: 4px 10px; font-size: 0.75rem; width: 100%;">
             🔔 เตือนลงทะเบียน
+          </button>
+          <button class="btn btn-sm btn-mark-byod" data-openid="${u.openId}" data-name="${u.name}" data-email="${u.email || ''}" style="padding: 3px 8px; font-size: 0.7rem; background: #faf5ff; color: #7c3aed; border: 1px solid #d8b4fe; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 4px; font-weight: 600;">
+            📱 ระบุเป็น BYOD
           </button>
         `;
       } else if (u.rowType === 'PENDING') {
@@ -2012,6 +2139,80 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     });
+
+    // Attach Mark BYOD Click Listeners
+    elements.liveMonitorTableBody.querySelectorAll('.btn-mark-byod').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const openId = btn.getAttribute('data-openid');
+        const name = btn.getAttribute('data-name');
+        const email = btn.getAttribute('data-email');
+        if (!confirm(`คุณต้องการระบุว่า "${name}" ทำงานโดยใช้อุปกรณ์ส่วนตัว 100% (BYOD) และไม่มีเครื่องของบริษัทใช่หรือไม่?`)) return;
+
+        try {
+          btn.disabled = true;
+          btn.textContent = "กำลังบันทึก...";
+          const res = await adminFetch('/api/byod/declare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ openId, name, email })
+          }).then(r => r.json());
+
+          if (res.ok) {
+            showToast(res.message || `ระบุ ${name} เป็น BYOD เรียบร้อยแล้ว`, "success");
+            if (!state.byodMap) state.byodMap = {};
+            if (openId) state.byodMap[openId] = res.data;
+            if (name) state.byodMap[name] = res.data;
+            loadLiveMonitorData();
+          } else {
+            showToast(res.message || "เกิดข้อผิดพลาด", "error");
+            btn.disabled = false;
+            btn.textContent = "📱 ระบุเป็น BYOD";
+          }
+        } catch (err) {
+          showToast(err.message, "error");
+          btn.disabled = false;
+          btn.textContent = "📱 ระบุเป็น BYOD";
+        }
+      });
+    });
+
+    // Attach Revoke BYOD Click Listeners
+    elements.liveMonitorTableBody.querySelectorAll('.btn-revoke-byod').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const openId = btn.getAttribute('data-openid');
+        const name = btn.getAttribute('data-name');
+        if (!confirm(`คุณต้องการยกเลิกสถานะ BYOD ของ "${name}" ใช่หรือไม่?`)) return;
+
+        try {
+          btn.disabled = true;
+          btn.textContent = "กำลังยกเลิก...";
+          const res = await adminFetch('/api/byod/revoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ openId, name })
+          }).then(r => r.json());
+
+          if (res.ok) {
+            showToast(res.message || "ยกเลิกสถานะ BYOD เรียบร้อยแล้ว", "success");
+            if (state.byodMap) {
+              if (openId) delete state.byodMap[openId];
+              if (name) delete state.byodMap[name];
+            }
+            loadLiveMonitorData();
+          } else {
+            showToast(res.message || "เกิดข้อผิดพลาด", "error");
+            btn.disabled = false;
+            btn.textContent = "🔄 ปลดสถานะ BYOD";
+          }
+        } catch (err) {
+          showToast(err.message, "error");
+          btn.disabled = false;
+          btn.textContent = "🔄 ปลดสถานะ BYOD";
+        }
+      });
+    });
   }
 
   // Filter pills click
@@ -2038,6 +2239,13 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.cardFilterPending.addEventListener('click', () => {
       currentMonitorFilter = 'PENDING';
       elements.liveMonitorFilterPills?.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.getAttribute('data-filter') === 'PENDING'));
+      renderLiveMonitorTable();
+    });
+  }
+  if (elements.cardFilterByod) {
+    elements.cardFilterByod.addEventListener('click', () => {
+      currentMonitorFilter = 'BYOD';
+      elements.liveMonitorFilterPills?.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.getAttribute('data-filter') === 'BYOD'));
       renderLiveMonitorTable();
     });
   }
@@ -2973,6 +3181,16 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       }, 500);
+    }
+
+    const byodParam = urlParams.get('byod');
+    if (byodParam === '1') {
+      setTimeout(() => {
+        const btn = document.getElementById('btnDeclareSelfByod');
+        if (btn) {
+          btn.click();
+        }
+      }, 900);
     }
   }
 

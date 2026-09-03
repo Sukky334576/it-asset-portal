@@ -1312,6 +1312,7 @@ unconfirmedEmployees: Array.from(unconfirmedEmployees),
 // Live Real-Time Employee Audit Monitor
 let serverCachedDirectory = null;
 let serverCachedDirectoryTime = 0;
+let serverByodMap = {};
 
 app.get('/api/admin/live-monitor', requireAdminAuth, async (req, res) => {
     try {
@@ -1325,12 +1326,7 @@ app.get('/api/admin/live-monitor', requireAdminAuth, async (req, res) => {
 
         const assets = await fetchMasterAssets();
 
-        // Filter out Nop.Pongsatorn as Director
-        const activeUsers = (serverCachedDirectory || []).filter(u => {
-            const email = (u.email || "").toLowerCase();
-            const name = u.name || "";
-            return !email.includes("nop@") && !name.includes("Pongsatorn") && !name.includes("Nop.");
-        });
+        const activeUsers = serverCachedDirectory || [];
 
         // Map assets to holders
         const holderMap = new Map();
@@ -1354,26 +1350,69 @@ app.get('/api/admin/live-monitor', requireAdminAuth, async (req, res) => {
         let verifiedCount = 0;
         let unverifiedCount = 0;
         let zeroDeviceCount = 0;
+        let byodCount = 0;
+        let directorCount = 0;
 
         const unverifiedList = [];
         const zeroDeviceList = [];
         const verifiedList = [];
+        const directorList = [];
+        const byodList = [];
 
         activeUsers.forEach(u => {
             const userAssets = holderMap.get(u.open_id)?.assets || [];
-            const email = u.email || "";
+            const email = (u.email || "").toLowerCase();
+            const name = u.name || "";
             const org = email.includes("@eddu.org") ? "EDDU" : "XPO";
+            const isDirector = email.includes("nop@") || name.includes("Pongsatorn") || name.includes("Nop.");
 
-            if (userAssets.length === 0) {
-                zeroDeviceCount++;
-                zeroDeviceList.push({
+            if (isDirector) {
+                directorCount++;
+                directorList.push({
                     openId: u.open_id,
                     name: u.name,
                     enName: u.en_name || u.name,
-                    email: email,
+                    email: u.email || "",
                     org,
-                    avatar: u.avatar?.avatar_72 || u.avatar_url || ""
+                    avatar: u.avatar?.avatar_72 || u.avatar_url || "",
+                    isDirector: true
                 });
+                return;
+            }
+
+            if (userAssets.length === 0) {
+                const isByod = (u.open_id && serverByodMap[u.open_id]) || 
+                               (u.name && serverByodMap[u.name]) ||
+                               Object.values(serverByodMap).some(b => 
+                                 (b.openId && b.openId === u.open_id) || 
+                                 (b.name && b.name.toLowerCase() === u.name.toLowerCase()) || 
+                                 (b.email && u.email && b.email.toLowerCase() === u.email.toLowerCase())
+                               );
+
+                if (isByod) {
+                    byodCount++;
+                    const byodDetail = serverByodMap[u.open_id] || serverByodMap[u.name] || {};
+                    byodList.push({
+                        openId: u.open_id,
+                        name: u.name,
+                        enName: u.en_name || u.name,
+                        email: u.email || "",
+                        org,
+                        avatar: u.avatar?.avatar_72 || u.avatar_url || "",
+                        declaredAt: byodDetail.declaredAt || "",
+                        isByod: true
+                    });
+                } else {
+                    zeroDeviceCount++;
+                    zeroDeviceList.push({
+                        openId: u.open_id,
+                        name: u.name,
+                        enName: u.en_name || u.name,
+                        email: u.email || "",
+                        org,
+                        avatar: u.avatar?.avatar_72 || u.avatar_url || ""
+                    });
+                }
             } else {
                 const allVerified = userAssets.every(a => {
                     const s = a["Audit Status (สถานะการยืนยัน)"];
@@ -1399,7 +1438,7 @@ app.get('/api/admin/live-monitor', requireAdminAuth, async (req, res) => {
                         openId: u.open_id,
                         name: u.name,
                         enName: u.en_name || u.name,
-                        email: email,
+                        email: u.email || "",
                         org,
                         avatar: u.avatar?.avatar_72 || u.avatar_url || "",
                         deviceCount: userAssets.length
@@ -1410,7 +1449,7 @@ app.get('/api/admin/live-monitor', requireAdminAuth, async (req, res) => {
                         openId: u.open_id,
                         name: u.name,
                         enName: u.en_name || u.name,
-                        email: email,
+                        email: u.email || "",
                         org,
                         avatar: u.avatar?.avatar_72 || u.avatar_url || "",
                         deviceCount: userAssets.length,
@@ -1428,14 +1467,19 @@ app.get('/api/admin/live-monitor', requireAdminAuth, async (req, res) => {
                 verifiedCount,
                 unverifiedCount,
                 zeroDeviceCount,
+                byodCount,
+                directorCount,
                 verifiedPct: totalActive > 0 ? Math.round((verifiedCount / totalActive) * 100) : 0,
                 unverifiedPct: totalActive > 0 ? Math.round((unverifiedCount / totalActive) * 100) : 0,
                 zeroDevicePct: totalActive > 0 ? Math.round((zeroDeviceCount / totalActive) * 100) : 0,
+                byodPct: totalActive > 0 ? Math.round((byodCount / totalActive) * 100) : 0,
                 timestamp: new Date().toISOString()
             },
             unverifiedList,
             zeroDeviceList,
-            verifiedList
+            verifiedList,
+            directorList,
+            byodList
         });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
@@ -1449,6 +1493,11 @@ app.post('/api/admin/live-monitor/nudge', requireAdminAuth, async (req, res) => 
 
         if (name && (name.includes("Pongsatorn") || name.includes("Nop."))) {
             return res.status(403).json({ ok: false, message: "ข้ามการส่งแจ้งเตือนหากรรมการบริษัท (Director Whitelist)" });
+        }
+
+        const isByod = (openId && serverByodMap[openId]) || (name && serverByodMap[name]) || Object.values(serverByodMap).some(b => b.openId === openId || b.name === name);
+        if (isByod) {
+            return res.status(403).json({ ok: false, message: "ข้ามการส่งแจ้งเตือน: พนักงานท่านนี้ยืนยันแล้วว่าใช้อุปกรณ์ส่วนตัว 100% (BYOD)" });
         }
 
         let card;
@@ -1465,7 +1514,7 @@ app.post('/api/admin/live-monitor/nudge', requireAdminAuth, async (req, res) => 
                         tag: "div",
                         text: {
                             tag: "lark_md",
-                            content: `สวัสดีครับคุณ **${name}** 👋\n\nขณะนี้ระบบตรวจพบว่าคุณยังไม่มีรายการอุปกรณ์ประจำตัวในฐานข้อมูล IT ขอความร่วมมือกดปุ่มด้านล่างเพื่อขึ้นทะเบียนเครื่องครับ:`
+                            content: `สวัสดีครับคุณ **${name}** 👋\n\nขณะนี้ระบบตรวจพบว่าคุณยังไม่มีรายการอุปกรณ์ประจำตัวในฐานข้อมูล IT ขอความร่วมมือกดปุ่มด้านล่างเพื่อดำเนินการครับ:\n\n• **หากมีอุปกรณ์บริษัท:** กดลงทะเบียนเครื่องใหม่\n• **หากใช้อุปกรณ์ส่วนตัว 100% (BYOD):** กดปุ่มยืนยันอุปกรณ์ส่วนตัวเพื่อหยุดการแจ้งเตือน`
                         }
                     },
                     {
@@ -1476,6 +1525,12 @@ app.post('/api/admin/live-monitor/nudge', requireAdminAuth, async (req, res) => 
                                 text: { tag: "plain_text", content: "➕ ลงทะเบียนเครื่องใหม่ / เพิ่มเติม" },
                                 type: "primary",
                                 url: `${portalUrl}/?tab=registerTab&emp=${encodeURIComponent(name)}`
+                            },
+                            {
+                                tag: "button",
+                                text: { tag: "plain_text", content: "📱 ฉันใช้อุปกรณ์ส่วนตัว 100% (BYOD)" },
+                                type: "default",
+                                url: `${portalUrl}/?tab=verifyTab&emp=${encodeURIComponent(name)}&byod=1`
                             }
                         ]
                     }
@@ -1517,6 +1572,32 @@ app.post('/api/admin/live-monitor/nudge', requireAdminAuth, async (req, res) => 
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
+});
+
+// BYOD Endpoints
+app.get('/api/byod/list', (req, res) => {
+    res.json({ ok: true, byodList: Object.values(serverByodMap), byodMap: serverByodMap });
+});
+
+app.post('/api/byod/declare', (req, res) => {
+    const { openId, name, email, notes } = req.body || {};
+    if (!openId && !name) return res.status(400).json({ ok: false, message: "openId or name is required" });
+    const key = openId || name;
+    serverByodMap[key] = {
+        openId: openId || "",
+        name: name || "",
+        email: email || "",
+        declaredAt: new Date().toISOString(),
+        notes: notes || "ใช้อุปกรณ์ส่วนตัว 100% (BYOD)"
+    };
+    res.json({ ok: true, message: "บันทึกสถานะ 'ใช้อุปกรณ์ส่วนตัว 100% (BYOD)' เรียบร้อยแล้ว", data: serverByodMap[key] });
+});
+
+app.post('/api/byod/revoke', (req, res) => {
+    const { openId, name } = req.body || {};
+    if (openId && serverByodMap[openId]) delete serverByodMap[openId];
+    if (name && serverByodMap[name]) delete serverByodMap[name];
+    res.json({ ok: true, message: "ยกเลิกสถานะ BYOD เรียบร้อยแล้ว" });
 });
 
 // 11. Bot Admin Endpoints: Test Console & Manual Trigger (Protected by requireAdminAuth)

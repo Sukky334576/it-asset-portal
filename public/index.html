@@ -620,6 +620,14 @@
               <div style="font-size: 0.75rem; color: #14532d; margin-top: 4px;" id="statLiveVerifiedPct">เสร็จสิ้นสมบูรณ์ --%</div>
             </div>
 
+            <div class="live-monitor-stat-card" id="cardFilterByod" style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.8125rem; font-weight: 600; color: #6b21a8;">🟣 เครื่องส่วนตัว (BYOD)</span>
+                <span style="font-size: 1.35rem; font-weight: 700; color: #7e22ce;" id="statLiveByodCount">0</span>
+              </div>
+              <div style="font-size: 0.75rem; color: #581c87; margin-top: 4px;" id="statLiveByodPct">ยกเว้นติดตาม 0%</div>
+            </div>
+
             <div class="live-monitor-stat-card" id="cardFilterAll" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 0.8125rem; font-weight: 600; color: #334155;">👥 พนักงานทั้งหมด (Lark)</span>
@@ -634,6 +642,7 @@
             <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="liveMonitorFilterPills">
               <button class="filter-pill active" data-filter="PENDING" style="cursor: pointer;">🟡 ยังไม่ยืนยัน (<span id="pillPendingCount">0</span>)</button>
               <button class="filter-pill" data-filter="ZERO" style="cursor: pointer;">🔴 ยังไม่ลงทะเบียน (<span id="pillZeroCount">0</span>)</button>
+              <button class="filter-pill" data-filter="BYOD" style="cursor: pointer;">🟣 เครื่องส่วนตัว (<span id="pillByodCount">0</span>)</button>
               <button class="filter-pill" data-filter="VERIFIED" style="cursor: pointer;">🟢 ยืนยันแล้ว (<span id="pillVerifiedCount">0</span>)</button>
               <button class="filter-pill" data-filter="ALL" style="cursor: pointer;">👥 ทั้งหมด (<span id="pillAllCount">0</span>)</button>
             </div>

@@ -224,10 +224,19 @@ function createZeroDeviceRegistrationCard(employeeName, employeeId = '') {
             tag: "button",
             text: {
               tag: "plain_text",
-              content: "➕ เข้าสู่ระบบเพื่อลงทะเบียนเครื่องใหม่ (เปิดบนเว็บ)"
+              content: "➕ ลงทะเบียนเครื่องใหม่ / เพิ่มเติม"
             },
             type: "primary",
             url: `${magicUrl}&tab=registerTab`
+          },
+          {
+            tag: "button",
+            text: {
+              tag: "plain_text",
+              content: "📱 ฉันใช้อุปกรณ์ส่วนตัว 100% (BYOD)"
+            },
+            type: "default",
+            url: `${magicUrl}&tab=verifyTab&byod=1`
           }
         ]
       }

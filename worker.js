@@ -800,15 +800,26 @@ export default {
           }
         });
 
+        // Check KV for BYOD Declarations
+        let byodMap = {};
+        if (env.IT_ASSET_KV) {
+          const raw = await env.IT_ASSET_KV.get("byod_declarations");
+          if (raw) {
+            try { byodMap = JSON.parse(raw); } catch (e) { byodMap = {}; }
+          }
+        }
+
         let verifiedCount = 0;
         let unverifiedCount = 0;
         let zeroDeviceCount = 0;
+        let byodCount = 0;
         let directorCount = 0;
 
         const unverifiedList = [];
         const zeroDeviceList = [];
         const verifiedList = [];
         const directorList = [];
+        const byodList = [];
 
         activeUsers.forEach(u => {
           const userAssets = holderMap.get(u.open_id)?.assets || [];
@@ -832,15 +843,39 @@ export default {
           }
 
           if (userAssets.length === 0) {
-            zeroDeviceCount++;
-            zeroDeviceList.push({
-              openId: u.open_id,
-              name: u.name,
-              enName: u.en_name || u.name,
-              email: u.email || "",
-              org,
-              avatar: u.avatar?.avatar_72 || u.avatar_url || ""
-            });
+            const isByod = (u.open_id && byodMap[u.open_id]) || 
+                           (u.name && byodMap[u.name]) ||
+                           (u.email && byodMap[u.email.toLowerCase()]) ||
+                           Object.values(byodMap).some(b => 
+                             (b.openId && b.openId === u.open_id) || 
+                             (b.name && b.name.toLowerCase() === u.name.toLowerCase()) || 
+                             (b.email && u.email && b.email.toLowerCase() === u.email.toLowerCase())
+                           );
+
+            if (isByod) {
+              byodCount++;
+              const byodDetail = byodMap[u.open_id] || byodMap[u.name] || Object.values(byodMap).find(b => b.openId === u.open_id || b.name === u.name) || {};
+              byodList.push({
+                openId: u.open_id,
+                name: u.name,
+                enName: u.en_name || u.name,
+                email: u.email || "",
+                org,
+                avatar: u.avatar?.avatar_72 || u.avatar_url || "",
+                declaredAt: byodDetail.declaredAt || "",
+                isByod: true
+              });
+            } else {
+              zeroDeviceCount++;
+              zeroDeviceList.push({
+                openId: u.open_id,
+                name: u.name,
+                enName: u.en_name || u.name,
+                email: u.email || "",
+                org,
+                avatar: u.avatar?.avatar_72 || u.avatar_url || ""
+              });
+            }
           } else {
             const allVerified = userAssets.every(a => {
               const s = a["Audit Status (สถานะการยืนยัน)"];
@@ -895,16 +930,19 @@ export default {
             verifiedCount,
             unverifiedCount,
             zeroDeviceCount,
+            byodCount,
             directorCount,
             verifiedPct: totalActive > 0 ? Math.round((verifiedCount / totalActive) * 100) : 0,
             unverifiedPct: totalActive > 0 ? Math.round((unverifiedCount / totalActive) * 100) : 0,
             zeroDevicePct: totalActive > 0 ? Math.round((zeroDeviceCount / totalActive) * 100) : 0,
+            byodPct: totalActive > 0 ? Math.round((byodCount / totalActive) * 100) : 0,
             timestamp: new Date().toISOString()
           },
           unverifiedList,
           zeroDeviceList,
           verifiedList,
-          directorList
+          directorList,
+          byodList
         });
       }
 
@@ -916,6 +954,19 @@ export default {
         // Check if director Nop
         if (name && (name.includes("Pongsatorn") || name.includes("Nop."))) {
           return jsonResponse({ ok: false, message: "ข้ามการส่งแจ้งเตือนหากรรมการบริษัท (Director Whitelist)" }, 403);
+        }
+
+        // Check if employee already declared BYOD
+        let byodMap = {};
+        if (env.IT_ASSET_KV) {
+          const raw = await env.IT_ASSET_KV.get("byod_declarations");
+          if (raw) {
+            try { byodMap = JSON.parse(raw); } catch (e) { byodMap = {}; }
+          }
+        }
+        const isByod = (openId && byodMap[openId]) || (name && byodMap[name]) || Object.values(byodMap).some(b => (b.openId && b.openId === openId) || (b.name && b.name === name));
+        if (isByod) {
+          return jsonResponse({ ok: false, message: "ข้ามการส่งแจ้งเตือน: พนักงานท่านนี้ยืนยันแล้วว่าใช้อุปกรณ์ส่วนตัว 100% (BYOD)" }, 403);
         }
 
         let card;
@@ -932,7 +983,7 @@ export default {
                 tag: "div",
                 text: {
                   tag: "lark_md",
-                  content: `สวัสดีครับคุณ **${name}** 👋\n\nขณะนี้ระบบตรวจพบว่าคุณยังไม่มีรายการอุปกรณ์ประจำตัวในฐานข้อมูล IT ขอความร่วมมือกดปุ่มด้านล่างเพื่อขึ้นทะเบียนเครื่องครับ:`
+                  content: `สวัสดีครับคุณ **${name}** 👋\n\nขณะนี้ระบบตรวจพบว่าคุณยังไม่มีรายการอุปกรณ์ประจำตัวในฐานข้อมูล IT ขอความร่วมมือกดปุ่มด้านล่างเพื่อดำเนินการครับ:\n\n• **หากมีอุปกรณ์บริษัท (เช่น โน้ตบุ๊ก / จอ):** กดลงทะเบียนเครื่องใหม่\n• **หากใช้อุปกรณ์ส่วนตัว 100% (BYOD):** กดปุ่มยืนยันอุปกรณ์ส่วนตัวเพื่อหยุดการแจ้งเตือน`
                 }
               },
               {
@@ -943,6 +994,12 @@ export default {
                     text: { tag: "plain_text", content: "➕ ลงทะเบียนเครื่องใหม่ / เพิ่มเติม" },
                     type: "primary",
                     url: `${portalUrl}/?tab=registerTab&emp=${encodeURIComponent(name)}`
+                  },
+                  {
+                    tag: "button",
+                    text: { tag: "plain_text", content: "📱 ฉันใช้อุปกรณ์ส่วนตัว 100% (BYOD)" },
+                    type: "default",
+                    url: `${portalUrl}/?tab=verifyTab&emp=${encodeURIComponent(name)}&byod=1`
                   }
                 ]
               }
@@ -981,6 +1038,81 @@ export default {
 
         const sendRes = await lark.sendInteractiveCard(openId, card);
         return jsonResponse({ ok: true, message: `ส่งแจ้งเตือนหา ${name} สำเร็จ!`, sendRes });
+      }
+
+      // BYOD Endpoints
+      if (pathname === "/api/byod/list" && method === "GET") {
+        let byodMap = {};
+        if (env.IT_ASSET_KV) {
+          const raw = await env.IT_ASSET_KV.get("byod_declarations");
+          if (raw) {
+            try { byodMap = JSON.parse(raw); } catch (e) { byodMap = {}; }
+          }
+        }
+        return jsonResponse({ ok: true, byodList: Object.values(byodMap), byodMap });
+      }
+
+      if (pathname === "/api/byod/declare" && method === "POST") {
+        const { openId, name, email, notes } = await request.json().catch(() => ({}));
+        if (!openId && !name) {
+          return jsonResponse({ ok: false, message: "openId or name is required" }, 400);
+        }
+
+        let byodMap = {};
+        if (env.IT_ASSET_KV) {
+          const raw = await env.IT_ASSET_KV.get("byod_declarations");
+          if (raw) {
+            try { byodMap = JSON.parse(raw); } catch (e) { byodMap = {}; }
+          }
+        }
+
+        const key = openId || name;
+        byodMap[key] = {
+          openId: openId || "",
+          name: name || "",
+          email: email || "",
+          declaredAt: new Date().toISOString(),
+          notes: notes || "ใช้อุปกรณ์ส่วนตัว 100% (BYOD)"
+        };
+
+        if (env.IT_ASSET_KV) {
+          await env.IT_ASSET_KV.put("byod_declarations", JSON.stringify(byodMap));
+        }
+
+        return jsonResponse({
+          ok: true,
+          message: "บันทึกสถานะ 'ใช้อุปกรณ์ส่วนตัว 100% (BYOD)' เรียบร้อยแล้ว ระบบจะไม่ส่งการแจ้งเตือนติดตามเครื่องหาคุณอีก",
+          data: byodMap[key]
+        });
+      }
+
+      if (pathname === "/api/byod/revoke" && method === "POST") {
+        const { openId, name } = await request.json().catch(() => ({}));
+        if (!openId && !name) {
+          return jsonResponse({ ok: false, message: "openId or name is required" }, 400);
+        }
+
+        let byodMap = {};
+        if (env.IT_ASSET_KV) {
+          const raw = await env.IT_ASSET_KV.get("byod_declarations");
+          if (raw) {
+            try { byodMap = JSON.parse(raw); } catch (e) { byodMap = {}; }
+          }
+        }
+
+        if (openId && byodMap[openId]) delete byodMap[openId];
+        if (name && byodMap[name]) delete byodMap[name];
+        Object.keys(byodMap).forEach(k => {
+          if ((name && byodMap[k].name === name) || (openId && byodMap[k].openId === openId)) {
+            delete byodMap[k];
+          }
+        });
+
+        if (env.IT_ASSET_KV) {
+          await env.IT_ASSET_KV.put("byod_declarations", JSON.stringify(byodMap));
+        }
+
+        return jsonResponse({ ok: true, message: "ยกเลิกสถานะ BYOD เรียบร้อยแล้ว" });
       }
 
       // Duplicates Management
