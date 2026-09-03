@@ -21,3 +21,8 @@ BOT_TEST_WHITELIST = "ou_454631b08ccd239365dae0b60a0f0aa7,ou_8ea6e249b0ef03ee8ee
 # Automated Cron Trigger: Uncomment when deploying to production account
 # [triggers]
 # crons = ["0 2 * * 1-5"]
+
+[[kv_namespaces]]
+binding = "IT_ASSET_KV"
+id = "7456fec8f47d499cb0fc8cd138e58e49"
+

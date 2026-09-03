@@ -2959,13 +2959,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(r => r.json());
 
         if (res.ok) {
-          showToast(res.message, "success");
-          elements.onboardingModalOverlay.style.display = 'none';
-          elements.onboardingEmployeeName.value = '';
-          elements.onboardingNotesInput.value = '';
+          showToast(res.message || "สร้างรายการจัดเตรียมอุปกรณ์สำเร็จ!", "success");
+          elements.onboardingModalOverlay.style.display = "none";
+          elements.onboardingEmployeeName.value = "";
+          elements.onboardingNotesInput.value = "";
           await loadLifecycleTasks();
         } else {
-          showToast(res.message, "error");
+          showToast(res.message || res.error || "เกิดข้อผิดพลาดในการสร้างคำขอ", "error");
         }
       } catch (err) {
         showToast("เกิดข้อผิดพลาด: " + err.message, "error");

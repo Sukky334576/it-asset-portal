@@ -1099,17 +1099,17 @@ export default {
       if (pathname === "/api/lifecycle/login" && method === "POST") {
         const body = await request.json().catch(() => ({}));
         const validPasswords = {
-          "HR": ["hr2026", env.ADMIN_PASSWORD || "itadmin2026"],
-          "ADMIN": ["admin2026", env.ADMIN_PASSWORD || "itadmin2026"],
-          "IT": [env.ADMIN_PASSWORD || "itadmin2026"]
+          "HR": ["hr2026", "lifecycle2026", env.ADMIN_PASSWORD || "itadmin2026"],
+          "ADMIN": ["admin2026", "lifecycle2026", env.ADMIN_PASSWORD || "itadmin2026"],
+          "IT": ["itadmin2026", "lifecycle2026"]
         };
-        const allowed = validPasswords[body.role] || [env.ADMIN_PASSWORD || "itadmin2026"];
+        const allowed = validPasswords[body.role] || ["lifecycle2026", env.ADMIN_PASSWORD || "itadmin2026"];
         if (allowed.includes(body.password?.trim())) {
           const names = { HR: "HR (คุณ Filmmy)", ADMIN: "Admin (คุณ Ploy)", IT: "IT (ฝ่ายไอที)" };
           const token = generateSignedToken({ role: body.role, actorName: names[body.role] || "Staff" }, 24);
           return jsonResponse({ ok: true, role: body.role, token, actorName: names[body.role] || "Staff" });
         }
-        return jsonResponse({ ok: false, message: "รหัสผ่านไม่ถูกต้องสำหรับบทบาทนี้" }, 401);
+        return jsonResponse({ ok: false, message: "รหัสผ่านไม่ถูกต้องสำหรับบทบาทนี้ (รหัสผ่านคือ lifecycle2026 หรือ hr2026)" }, 401);
       }
 
       if (pathname === "/api/lifecycle/tasks" && method === "GET") {
@@ -1117,7 +1117,9 @@ export default {
         let tasks = [];
         if (env.IT_ASSET_KV) {
           const kvData = await env.IT_ASSET_KV.get("lifecycle_tasks");
-          if (kvData) tasks = JSON.parse(kvData);
+          if (kvData) {
+            try { tasks = JSON.parse(kvData); } catch (e) { tasks = []; }
+          }
         }
 
         const stats = {
@@ -1141,11 +1143,13 @@ export default {
         let tasks = [];
         if (env.IT_ASSET_KV) {
           const raw = await env.IT_ASSET_KV.get("lifecycle_tasks");
-          if (raw) tasks = JSON.parse(raw);
+          if (raw) {
+            try { tasks = JSON.parse(raw); } catch (e) { tasks = []; }
+          }
         }
 
         const newTask = {
-          id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          id: `TASK-OFF-${Date.now()}`,
           type: "offboarding",
           employeeName: sanitizeString(employeeName, 100),
           organization: organization || "XPO",
@@ -1153,7 +1157,8 @@ export default {
           notes: sanitizeString(notes, 500),
           currentStage: "WAITING_ADMIN_COLLECTION",
           devices: devices || [],
-          history: [{ stage: "WAITING_ADMIN_COLLECTION", actor: actor || "HR (คุณ Filmmy)", timestamp: new Date().toISOString() }]
+          history: [{ stage: "WAITING_ADMIN_COLLECTION", actor: actor || "HR (คุณ Filmmy)", timestamp: new Date().toISOString() }],
+          createdAt: new Date().toISOString()
         };
 
         tasks.unshift(newTask);
@@ -1172,20 +1177,24 @@ export default {
         let tasks = [];
         if (env.IT_ASSET_KV) {
           const raw = await env.IT_ASSET_KV.get("lifecycle_tasks");
-          if (raw) tasks = JSON.parse(raw);
+          if (raw) {
+            try { tasks = JSON.parse(raw); } catch (e) { tasks = []; }
+          }
         }
 
+        const finalName = sanitizeString(employeeName || `${position} (New Joiner)`, 100);
         const newTask = {
-          id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          id: `TASK-ON-${Date.now()}`,
           type: "onboarding",
           position: sanitizeString(position, 100),
-          employeeName: sanitizeString(employeeName || `${position} (New Joiner)`, 100),
+          employeeName: finalName,
           organization: organization || "XPO",
           targetDate: sanitizeString(targetDate || new Date().toISOString().split("T")[0], 20),
           notes: sanitizeString(notes, 500),
           currentStage: "WAITING_ADMIN_PACK",
           devices: devices || [],
-          history: [{ stage: "WAITING_ADMIN_PACK", actor: actor || "HR (คุณ Filmmy)", timestamp: new Date().toISOString() }]
+          history: [{ stage: "WAITING_ADMIN_PACK", actor: actor || "HR (คุณ Filmmy)", timestamp: new Date().toISOString() }],
+          createdAt: new Date().toISOString()
         };
 
         tasks.unshift(newTask);
@@ -1193,7 +1202,7 @@ export default {
           await env.IT_ASSET_KV.put("lifecycle_tasks", JSON.stringify(tasks));
         }
 
-        return jsonResponse({ ok: true, message: `สร้างรายการจัดเตรียมอุปกรณ์สำหรับ ${position} เรียบร้อยแล้ว!`, task: newTask });
+        return jsonResponse({ ok: true, message: `สร้างรายการจัดเตรียมอุปกรณ์สำหรับ ${finalName} เรียบร้อยแล้ว!`, task: newTask });
       }
 
       if (pathname === "/api/lifecycle/tasks/advance" && method === "POST") {
