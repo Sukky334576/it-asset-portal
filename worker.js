@@ -756,10 +756,24 @@ export default {
         }
 
         if (!users || users.length === 0) {
-          users = await lark.fetchCompanyDirectoryUsers();
-          if (env.IT_ASSET_KV && users && users.length > 0) {
-            await env.IT_ASSET_KV.put("company_directory_users", JSON.stringify(users), { expirationTtl: 600 });
-          }
+          const assets = await lark.fetchRecords(TABLE_MASTER);
+          const holderSet = new Map();
+          assets.forEach(a => {
+            const h = a["Current Holder (ผู้ถือครองปัจจุบัน)"];
+            let openId = "";
+            let name = "";
+            if (Array.isArray(h) && h[0]) {
+              openId = h[0].id;
+              name = h[0].en_name || h[0].name;
+            } else if (typeof h === "object" && h) {
+              openId = h.id;
+              name = h.en_name || h.name;
+            }
+            if (openId && !openId.includes("ส่วนกลาง")) {
+              holderSet.set(openId, { open_id: openId, name, en_name: name });
+            }
+          });
+          users = Array.from(holderSet.values());
         }
 
         const assets = await lark.fetchRecords(TABLE_MASTER);
