@@ -778,12 +778,8 @@ export default {
 
         const assets = await lark.fetchRecords(TABLE_MASTER);
 
-        // Filter out Nop.Pongsatorn as Director
-        const activeUsers = users.filter(u => {
-          const email = (u.email || "").toLowerCase();
-          const name = u.name || "";
-          return !email.includes("nop@") && !name.includes("Pongsatorn") && !name.includes("Nop.");
-        });
+        // Process all 81 users from Lark
+        const activeUsers = users;
 
         // Map assets to holders
         const holderMap = new Map();
@@ -807,15 +803,33 @@ export default {
         let verifiedCount = 0;
         let unverifiedCount = 0;
         let zeroDeviceCount = 0;
+        let directorCount = 0;
 
         const unverifiedList = [];
         const zeroDeviceList = [];
         const verifiedList = [];
+        const directorList = [];
 
         activeUsers.forEach(u => {
           const userAssets = holderMap.get(u.open_id)?.assets || [];
-          const email = u.email || "";
+          const email = (u.email || "").toLowerCase();
+          const name = u.name || "";
           const org = email.includes("@eddu.org") ? "EDDU" : "XPO";
+          const isDirector = email.includes("nop@") || name.includes("Pongsatorn") || name.includes("Nop.");
+
+          if (isDirector) {
+            directorCount++;
+            directorList.push({
+              openId: u.open_id,
+              name: u.name,
+              enName: u.en_name || u.name,
+              email: u.email || "",
+              org,
+              avatar: u.avatar?.avatar_72 || u.avatar_url || "",
+              isDirector: true
+            });
+            return;
+          }
 
           if (userAssets.length === 0) {
             zeroDeviceCount++;
@@ -823,7 +837,7 @@ export default {
               openId: u.open_id,
               name: u.name,
               enName: u.en_name || u.name,
-              email: email,
+              email: u.email || "",
               org,
               avatar: u.avatar?.avatar_72 || u.avatar_url || ""
             });
@@ -852,7 +866,7 @@ export default {
                 openId: u.open_id,
                 name: u.name,
                 enName: u.en_name || u.name,
-                email: email,
+                email: u.email || "",
                 org,
                 avatar: u.avatar?.avatar_72 || u.avatar_url || "",
                 deviceCount: userAssets.length
@@ -863,7 +877,7 @@ export default {
                 openId: u.open_id,
                 name: u.name,
                 enName: u.en_name || u.name,
-                email: email,
+                email: u.email || "",
                 org,
                 avatar: u.avatar?.avatar_72 || u.avatar_url || "",
                 deviceCount: userAssets.length,
@@ -881,6 +895,7 @@ export default {
             verifiedCount,
             unverifiedCount,
             zeroDeviceCount,
+            directorCount,
             verifiedPct: totalActive > 0 ? Math.round((verifiedCount / totalActive) * 100) : 0,
             unverifiedPct: totalActive > 0 ? Math.round((unverifiedCount / totalActive) * 100) : 0,
             zeroDevicePct: totalActive > 0 ? Math.round((zeroDeviceCount / totalActive) * 100) : 0,
@@ -888,7 +903,8 @@ export default {
           },
           unverifiedList,
           zeroDeviceList,
-          verifiedList
+          verifiedList,
+          directorList
         });
       }
 

@@ -1891,7 +1891,8 @@ document.addEventListener('DOMContentLoaded', () => {
       list = [
         ...(liveMonitorData.unverifiedList || []).map(u => ({ ...u, rowType: 'PENDING' })),
         ...(liveMonitorData.zeroDeviceList || []).map(u => ({ ...u, rowType: 'ZERO' })),
-        ...(liveMonitorData.verifiedList || []).map(u => ({ ...u, rowType: 'VERIFIED' }))
+        ...(liveMonitorData.verifiedList || []).map(u => ({ ...u, rowType: 'VERIFIED' })),
+        ...(liveMonitorData.directorList || []).map(u => ({ ...u, rowType: 'DIRECTOR' }))
       ];
     }
 
@@ -1914,7 +1915,11 @@ document.addEventListener('DOMContentLoaded', () => {
       let devicesHtml = '';
       let actionBtnHtml = '';
 
-      if (u.rowType === 'ZERO') {
+      if (u.rowType === 'DIRECTOR') {
+        badgeHtml = `<span class="tag" style="background:#f1f5f9; color:#475569; font-weight:600;">👑 กรรมการบริษัท</span>`;
+        devicesHtml = `<span style="color:#64748b; font-size:0.8125rem;">ยกเว้นการตรวจสอบตามนโยบาย</span>`;
+        actionBtnHtml = `<span style="color:#94a3b8; font-size:0.75rem; font-weight:600; display:block; text-align:center;">🛡️ ไม่ส่งแจ้งเตือน</span>`;
+      } else if (u.rowType === 'ZERO') {
         badgeHtml = `<span class="tag" style="background:#fee2e2; color:#b91c1c; font-weight:600;">🔴 ยังไม่ลงทะเบียน</span>`;
         devicesHtml = `<span style="color:#94a3b8; font-size:0.8125rem;">ยังไม่มีรายการอุปกรณ์ในระบบ (0 ชิ้น)</span>`;
         actionBtnHtml = `

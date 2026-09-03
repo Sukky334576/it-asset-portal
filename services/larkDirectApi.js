@@ -274,7 +274,7 @@ class LarkDirectApi {
     const userMap = new Map();
     const allDeptIds = ["0", ...allDepts.map(d => d.open_department_id || d.department_id)];
 
-    await Promise.all(allDeptIds.map(async (deptId) => {
+    for (const deptId of allDeptIds) {
       let pToken = "";
       while (true) {
         const isRoot = deptId === "0";
@@ -292,7 +292,7 @@ class LarkDirectApi {
           break;
         }
       }
-    }));
+    }
 
     return Array.from(userMap.values());
   }
