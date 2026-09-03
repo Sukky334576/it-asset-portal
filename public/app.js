@@ -156,6 +156,30 @@ document.addEventListener('DOMContentLoaded', () => {
     missingTagTbody: document.getElementById('missingTagTbody'),
     missingTagBadgeCount: document.getElementById('missingTagBadgeCount'),
 
+    // Live Monitor Elements
+    liveMonitorSyncStatus: document.getElementById('liveMonitorSyncStatus'),
+    chkAutoRefreshMonitor: document.getElementById('chkAutoRefreshMonitor'),
+    btnRefreshLiveMonitor: document.getElementById('btnRefreshLiveMonitor'),
+    statLiveZeroCount: document.getElementById('statLiveZeroCount'),
+    statLiveZeroPct: document.getElementById('statLiveZeroPct'),
+    statLivePendingCount: document.getElementById('statLivePendingCount'),
+    statLivePendingPct: document.getElementById('statLivePendingPct'),
+    statLiveVerifiedCount: document.getElementById('statLiveVerifiedCount'),
+    statLiveVerifiedPct: document.getElementById('statLiveVerifiedPct'),
+    statLiveTotalCount: document.getElementById('statLiveTotalCount'),
+    liveMonitorFilterPills: document.getElementById('liveMonitorFilterPills'),
+    pillPendingCount: document.getElementById('pillPendingCount'),
+    pillZeroCount: document.getElementById('pillZeroCount'),
+    pillVerifiedCount: document.getElementById('pillVerifiedCount'),
+    pillAllCount: document.getElementById('pillAllCount'),
+    liveMonitorSearchInput: document.getElementById('liveMonitorSearchInput'),
+    btnCopyPendingList: document.getElementById('btnCopyPendingList'),
+    liveMonitorTableBody: document.getElementById('liveMonitorTableBody'),
+    cardFilterZero: document.getElementById('cardFilterZero'),
+    cardFilterPending: document.getElementById('cardFilterPending'),
+    cardFilterVerified: document.getElementById('cardFilterVerified'),
+    cardFilterAll: document.getElementById('cardFilterAll'),
+
     // Add Central Stock Elements
     btnOpenAddStockModal: document.getElementById('btnOpenAddStockModal'),
     adminAuthPromptModal: document.getElementById('adminAuthPromptModal'),
@@ -531,6 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.ok) {
         state.adminStats = res;
         renderAdminStats();
+        loadLiveMonitorData();
       } else if (res.code === 'UNAUTHORIZED') {
         sessionStorage.removeItem('it_admin_auth');
         sessionStorage.removeItem('it_admin_token');
@@ -716,6 +741,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (targetTab === 'adminTab') {
         checkAdminAuth();
+        if (sessionStorage.getItem('it_admin_auth') === 'true') {
+          loadLiveMonitorData();
+        }
       } else if (targetTab === 'lifecycleTab') {
         loadLifecycleTasks();
       }
@@ -1800,6 +1828,276 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------- TAB 4: IT ADMIN DASHBOARD ---------------- //
+
+  // ---------------- LIVE REAL-TIME EMPLOYEE AUDIT MONITOR ---------------- //
+  let liveMonitorData = { stats: null, unverifiedList: [], zeroDeviceList: [], verifiedList: [] };
+  let currentMonitorFilter = 'PENDING';
+  let monitorAutoRefreshTimer = null;
+
+  async function loadLiveMonitorData(force = false) {
+    if (!elements.liveMonitorTableBody) return;
+
+    try {
+      if (elements.liveMonitorSyncStatus) elements.liveMonitorSyncStatus.textContent = "กำลังซิงก์ข้อมูล...";
+      const res = await adminFetch(`/api/admin/live-monitor${force ? '?refresh=true' : ''}`).then(r => r.json());
+
+      if (res.ok && res.stats) {
+        liveMonitorData = res;
+        const s = res.stats;
+
+        if (elements.statLiveZeroCount) elements.statLiveZeroCount.textContent = s.zeroDeviceCount;
+        if (elements.statLiveZeroPct) elements.statLiveZeroPct.textContent = `ยังไม่มีข้อมูลในระบบ ${s.zeroDevicePct}%`;
+
+        if (elements.statLivePendingCount) elements.statLivePendingCount.textContent = s.unverifiedCount;
+        if (elements.statLivePendingPct) elements.statLivePendingPct.textContent = `รอตรวจสอบเครื่อง ${s.unverifiedPct}%`;
+
+        if (elements.statLiveVerifiedCount) elements.statLiveVerifiedCount.textContent = s.verifiedCount;
+        if (elements.statLiveVerifiedPct) elements.statLiveVerifiedPct.textContent = `เสร็จสิ้นสมบูรณ์ ${s.verifiedPct}%`;
+
+        if (elements.statLiveTotalCount) elements.statLiveTotalCount.textContent = `${s.totalActive} คน`;
+
+        if (elements.pillPendingCount) elements.pillPendingCount.textContent = s.unverifiedCount;
+        if (elements.pillZeroCount) elements.pillZeroCount.textContent = s.zeroDeviceCount;
+        if (elements.pillVerifiedCount) elements.pillVerifiedCount.textContent = s.verifiedCount;
+        if (elements.pillAllCount) elements.pillAllCount.textContent = s.totalActive;
+
+        const timeStr = new Date().toLocaleTimeString('th-TH');
+        if (elements.liveMonitorSyncStatus) elements.liveMonitorSyncStatus.textContent = `ซิงก์ล่าสุด: ${timeStr}`;
+
+        renderLiveMonitorTable();
+      } else {
+        elements.liveMonitorTableBody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:var(--danger); padding:20px;">โหลดข้อมูลไม่สำเร็จ: ${res.message || 'โปรดเข้าสู่ระบบ Admin'}</td></tr>`;
+      }
+    } catch (err) {
+      console.error("Live Monitor Error:", err);
+      if (elements.liveMonitorTableBody) {
+        elements.liveMonitorTableBody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:var(--danger); padding:20px;">เกิดข้อผิดพลาดในการเชื่อมต่อ: ${err.message}</td></tr>`;
+      }
+    }
+  }
+
+  function renderLiveMonitorTable() {
+    if (!elements.liveMonitorTableBody) return;
+    const query = (elements.liveMonitorSearchInput?.value || "").toLowerCase().trim();
+
+    let list = [];
+    if (currentMonitorFilter === 'PENDING') {
+      list = (liveMonitorData.unverifiedList || []).map(u => ({ ...u, rowType: 'PENDING' }));
+    } else if (currentMonitorFilter === 'ZERO') {
+      list = (liveMonitorData.zeroDeviceList || []).map(u => ({ ...u, rowType: 'ZERO' }));
+    } else if (currentMonitorFilter === 'VERIFIED') {
+      list = (liveMonitorData.verifiedList || []).map(u => ({ ...u, rowType: 'VERIFIED' }));
+    } else {
+      list = [
+        ...(liveMonitorData.unverifiedList || []).map(u => ({ ...u, rowType: 'PENDING' })),
+        ...(liveMonitorData.zeroDeviceList || []).map(u => ({ ...u, rowType: 'ZERO' })),
+        ...(liveMonitorData.verifiedList || []).map(u => ({ ...u, rowType: 'VERIFIED' }))
+      ];
+    }
+
+    if (query) {
+      list = list.filter(u => 
+        (u.name && u.name.toLowerCase().includes(query)) ||
+        (u.enName && u.enName.toLowerCase().includes(query)) ||
+        (u.email && u.email.toLowerCase().includes(query)) ||
+        (u.org && u.org.toLowerCase().includes(query))
+      );
+    }
+
+    if (list.length === 0) {
+      elements.liveMonitorTableBody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:24px; color:var(--text-muted);">🎉 ไม่พบข้อมูลในหมวดนี้ หรือไม่ตรงกับคำค้นหา</td></tr>`;
+      return;
+    }
+
+    const rowsHtml = list.map(u => {
+      let badgeHtml = '';
+      let devicesHtml = '';
+      let actionBtnHtml = '';
+
+      if (u.rowType === 'ZERO') {
+        badgeHtml = `<span class="tag" style="background:#fee2e2; color:#b91c1c; font-weight:600;">🔴 ยังไม่ลงทะเบียน</span>`;
+        devicesHtml = `<span style="color:#94a3b8; font-size:0.8125rem;">ยังไม่มีรายการอุปกรณ์ในระบบ (0 ชิ้น)</span>`;
+        actionBtnHtml = `
+          <button class="btn btn-sm btn-primary btn-nudge-employee" data-openid="${u.openId}" data-name="${u.name}" data-type="REGISTER" style="padding: 4px 10px; font-size: 0.75rem; width: 100%;">
+            🔔 เตือนลงทะเบียน
+          </button>
+        `;
+      } else if (u.rowType === 'PENDING') {
+        badgeHtml = `<span class="tag" style="background:#fef3c7; color:#92400e; font-weight:600;">🟡 รอการยืนยัน (${u.pendingDevices?.length || 0})</span>`;
+        const devItems = (u.pendingDevices || []).map(d => 
+          `<div style="margin-bottom:2px;">• <strong>${d.name}</strong> <span style="color:#64748b; font-size:0.75rem;">(Tag: <code>${d.tag}</code> | S/N: <code>${d.sn}</code>)</span></div>`
+        ).join('');
+        devicesHtml = `<div style="font-size:0.8125rem;">${devItems || '-'}</div>`;
+        const devPayload = encodeURIComponent(JSON.stringify(u.pendingDevices || []));
+        actionBtnHtml = `
+          <button class="btn btn-sm btn-nudge-employee" data-openid="${u.openId}" data-name="${u.name}" data-type="VERIFY" data-devices="${devPayload}" style="padding: 4px 10px; font-size: 0.75rem; background:#f59e0b; color:#fff; border:none; border-radius:4px; cursor:pointer; width: 100%; font-weight:600;">
+            🔔 เตือนกดยืนยัน
+          </button>
+        `;
+      } else {
+        badgeHtml = `<span class="tag" style="background:#dcfce7; color:#166534; font-weight:600;">🟢 ยืนยันครบแล้ว</span>`;
+        devicesHtml = `<span style="color:#166534; font-size:0.8125rem;">✅ ยืนยันความถูกต้องครบทุกเครื่อง (${u.deviceCount || 1} ชิ้น)</span>`;
+        actionBtnHtml = `<span style="color:#166534; font-size:0.8rem; font-weight:600; display:block; text-align:center;">✅ สมบูรณ์แล้ว</span>`;
+      }
+
+      const avatarHtml = u.avatar 
+        ? `<img src="${u.avatar}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">`
+        : `<span style="font-size:1rem;">👤</span>`;
+
+      return `
+        <tr>
+          <td>${badgeHtml}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              ${avatarHtml}
+              <div>
+                <strong>${u.name}</strong>
+                ${u.enName && u.enName !== u.name ? `<div style="font-size:0.75rem; color:#64748b;">${u.enName}</div>` : ''}
+              </div>
+            </div>
+          </td>
+          <td><span class="tag tag-org">${u.org || "XPO"}</span></td>
+          <td style="font-size:0.8125rem; color:#475569;">${u.email || "-"}</td>
+          <td>${devicesHtml}</td>
+          <td style="text-align: center;">${actionBtnHtml}</td>
+        </tr>
+      `;
+    });
+
+    elements.liveMonitorTableBody.innerHTML = rowsHtml.join('');
+
+    // Attach Nudge Click Listeners
+    elements.liveMonitorTableBody.querySelectorAll('.btn-nudge-employee').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const openId = btn.getAttribute('data-openid');
+        const name = btn.getAttribute('data-name');
+        const type = btn.getAttribute('data-type');
+        let devices = [];
+        try {
+          const rawDev = btn.getAttribute('data-devices');
+          if (rawDev) devices = JSON.parse(decodeURIComponent(rawDev));
+        } catch(e) {}
+
+        if (!confirm(`ต้องการส่งการ์ดแจ้งเตือนผ่าน Lark Bot ไปหา "${name}" ตอนนี้ใช่หรือไม่?`)) return;
+
+        btn.disabled = true;
+        btn.textContent = "กำลังส่ง...";
+
+        try {
+          const res = await adminFetch('/api/admin/live-monitor/nudge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ openId, name, type, devices })
+          }).then(r => r.json());
+
+          if (res.ok) {
+            showToast(`ส่งการ์ดแจ้งเตือนหา ${name} สำเร็จเรียบร้อย!`, "success");
+            btn.textContent = "✓ ส่งเตือนแล้ว";
+            btn.style.background = "#10b981";
+          } else {
+            showToast(res.message || "เกิดข้อผิดพลาดในการส่ง", "error");
+            btn.disabled = false;
+            btn.textContent = "🔔 ลองใหม่อีกครั้ง";
+          }
+        } catch (err) {
+          showToast("เกิดข้อผิดพลาด: " + err.message, "error");
+          btn.disabled = false;
+          btn.textContent = "🔔 ลองใหม่อีกครั้ง";
+        }
+      });
+    });
+  }
+
+  // Filter pills click
+  if (elements.liveMonitorFilterPills) {
+    elements.liveMonitorFilterPills.querySelectorAll('.filter-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        elements.liveMonitorFilterPills.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentMonitorFilter = pill.getAttribute('data-filter');
+        renderLiveMonitorTable();
+      });
+    });
+  }
+
+  // Mini-cards click to filter
+  if (elements.cardFilterZero) {
+    elements.cardFilterZero.addEventListener('click', () => {
+      currentMonitorFilter = 'ZERO';
+      elements.liveMonitorFilterPills?.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.getAttribute('data-filter') === 'ZERO'));
+      renderLiveMonitorTable();
+    });
+  }
+  if (elements.cardFilterPending) {
+    elements.cardFilterPending.addEventListener('click', () => {
+      currentMonitorFilter = 'PENDING';
+      elements.liveMonitorFilterPills?.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.getAttribute('data-filter') === 'PENDING'));
+      renderLiveMonitorTable();
+    });
+  }
+  if (elements.cardFilterVerified) {
+    elements.cardFilterVerified.addEventListener('click', () => {
+      currentMonitorFilter = 'VERIFIED';
+      elements.liveMonitorFilterPills?.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.getAttribute('data-filter') === 'VERIFIED'));
+      renderLiveMonitorTable();
+    });
+  }
+  if (elements.cardFilterAll) {
+    elements.cardFilterAll.addEventListener('click', () => {
+      currentMonitorFilter = 'ALL';
+      elements.liveMonitorFilterPills?.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.getAttribute('data-filter') === 'ALL'));
+      renderLiveMonitorTable();
+    });
+  }
+
+  // Search input
+  if (elements.liveMonitorSearchInput) {
+    elements.liveMonitorSearchInput.addEventListener('input', () => renderLiveMonitorTable());
+  }
+
+  // Manual refresh
+  if (elements.btnRefreshLiveMonitor) {
+    elements.btnRefreshLiveMonitor.addEventListener('click', async () => {
+      elements.btnRefreshLiveMonitor.disabled = true;
+      elements.btnRefreshLiveMonitor.textContent = "กำลังซิงก์...";
+      await loadLiveMonitorData(true);
+      elements.btnRefreshLiveMonitor.disabled = false;
+      elements.btnRefreshLiveMonitor.textContent = "🔄 ซิงก์ข้อมูลสด";
+      showToast("ซิงก์ข้อมูลพนักงานล่าสุดสำเร็จ!", "success");
+    });
+  }
+
+  // Copy list to clipboard
+  if (elements.btnCopyPendingList) {
+    elements.btnCopyPendingList.addEventListener('click', () => {
+      let textToCopy = "";
+      if (currentMonitorFilter === 'ZERO') {
+        const names = (liveMonitorData.zeroDeviceList || []).map((u, i) => `${i + 1}. ${u.name} (${u.org})`).join('\n');
+        textToCopy = `📢 รายชื่อพนักงานที่ยังไม่ขึ้นทะเบียนเครื่องในระบบ (${liveMonitorData.zeroDeviceList?.length || 0} คน):\n${names}\n\n👉 โปรดลงทะเบียนเครื่องได้ที่: https://it-asset-portal.shine-toothbrush.workers.dev/?tab=registerTab`;
+      } else if (currentMonitorFilter === 'VERIFIED') {
+        const names = (liveMonitorData.verifiedList || []).map((u, i) => `${i + 1}. ${u.name} (${u.org})`).join('\n');
+        textToCopy = `✅ รายชื่อพนักงานที่ยืนยันเครื่องเรียบร้อยแล้ว (${liveMonitorData.verifiedList?.length || 0} คน):\n${names}`;
+      } else {
+        const names = (liveMonitorData.unverifiedList || []).map((u, i) => `${i + 1}. ${u.name} (${u.org}) - ค้างยืนยัน ${u.pendingDevices?.length || 0} ชิ้น`).join('\n');
+        textToCopy = `⏳ รายชื่อพนักงานที่มีเครื่องรอการยืนยัน (${liveMonitorData.unverifiedList?.length || 0} คน):\n${names}\n\n👉 โปรดกดยืนยันเครื่องได้ที่: https://it-asset-portal.shine-toothbrush.workers.dev/?tab=verifyTab`;
+      }
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        showToast("คัดลอกรายชื่อลง Clipboard สำเร็จ! นำไปวางใน Lark ได้เลย", "success");
+      });
+    });
+  }
+
+  // Auto refresh timer setup (30s)
+  function startMonitorAutoRefresh() {
+    if (monitorAutoRefreshTimer) clearInterval(monitorAutoRefreshTimer);
+    monitorAutoRefreshTimer = setInterval(() => {
+      if (elements.chkAutoRefreshMonitor && elements.chkAutoRefreshMonitor.checked && elements.adminDashboardView && elements.adminDashboardView.style.display !== 'none') {
+        loadLiveMonitorData();
+      }
+    }, 30000);
+  }
+  startMonitorAutoRefresh();
 
   function renderAdminStats() {
     if (!state.adminStats) return;

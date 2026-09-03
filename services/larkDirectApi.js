@@ -240,6 +240,62 @@ class LarkDirectApi {
     }
     return [];
   }
+
+  async fetchCompanyDirectoryUsers() {
+    const token = await this.getTenantAccessToken();
+    const allDepts = [];
+    const deptQueue = ["0"];
+    const visitedDepts = new Set(["0"]);
+
+    while (deptQueue.length > 0) {
+      const parentId = deptQueue.shift();
+      let pageToken = "";
+      while (true) {
+        const isRoot = parentId === "0";
+        const url = `https://open.larksuite.com/open-apis/contact/v3/departments?parent_department_id=${parentId}&parent_department_id_type=${isRoot ? "department_id" : "open_department_id"}&page_size=50${pageToken ? `&page_token=${pageToken}` : ""}`;
+        const res = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } }).then(r => r.json());
+        if (res.code === 0 && res.data?.items) {
+          for (const d of res.data.items) {
+            const dId = d.open_department_id || d.department_id;
+            if (!visitedDepts.has(dId)) {
+              visitedDepts.add(dId);
+              allDepts.push(d);
+              deptQueue.push(dId);
+            }
+          }
+          if (!res.data.has_more || !res.data.page_token) break;
+          pageToken = res.data.page_token;
+        } else {
+          break;
+        }
+      }
+    }
+
+    const userMap = new Map();
+    const allDeptIds = ["0", ...allDepts.map(d => d.open_department_id || d.department_id)];
+
+    await Promise.all(allDeptIds.map(async (deptId) => {
+      let pToken = "";
+      while (true) {
+        const isRoot = deptId === "0";
+        const url = `https://open.larksuite.com/open-apis/contact/v3/users/find_by_department?department_id=${deptId}&department_id_type=${isRoot ? "department_id" : "open_department_id"}&page_size=50${pToken ? `&page_token=${pToken}` : ""}`;
+        const res = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } }).then(r => r.json());
+        if (res.code === 0 && res.data?.items) {
+          for (const u of res.data.items) {
+            if (u.open_id) {
+              userMap.set(u.open_id, u);
+            }
+          }
+          if (!res.data.has_more || !res.data.page_token) break;
+          pToken = res.data.page_token;
+        } else {
+          break;
+        }
+      }
+    }));
+
+    return Array.from(userMap.values());
+  }
 }
 
 module.exports = LarkDirectApi;

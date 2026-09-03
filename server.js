@@ -1309,6 +1309,216 @@ unconfirmedEmployees: Array.from(unconfirmedEmployees),
     }
 });
 
+// Live Real-Time Employee Audit Monitor
+let serverCachedDirectory = null;
+let serverCachedDirectoryTime = 0;
+
+app.get('/api/admin/live-monitor', requireAdminAuth, async (req, res) => {
+    try {
+        const forceRefresh = req.query.refresh === 'true';
+        const now = Date.now();
+
+        if (forceRefresh || !serverCachedDirectory || (now - serverCachedDirectoryTime > 600000)) {
+            serverCachedDirectory = await larkDirect.fetchCompanyDirectoryUsers();
+            serverCachedDirectoryTime = now;
+        }
+
+        const assets = await fetchMasterAssets();
+
+        // Filter out Nop.Pongsatorn as Director
+        const activeUsers = (serverCachedDirectory || []).filter(u => {
+            const email = (u.email || "").toLowerCase();
+            const name = u.name || "";
+            return !email.includes("nop@") && !name.includes("Pongsatorn") && !name.includes("Nop.");
+        });
+
+        // Map assets to holders
+        const holderMap = new Map();
+        assets.forEach(a => {
+            const h = a["Current Holder (ผู้ถือครองปัจจุบัน)"];
+            let openId = "";
+            let name = "";
+            if (Array.isArray(h) && h[0]) {
+                openId = h[0].id || "";
+                name = h[0].en_name || h[0].name || "";
+            } else if (typeof h === "object" && h) {
+                openId = h.id || "";
+                name = h.en_name || h.name || "";
+            }
+            if (openId && !openId.includes("ส่วนกลาง")) {
+                if (!holderMap.has(openId)) holderMap.set(openId, { openId, name, assets: [] });
+                holderMap.get(openId).assets.push(a);
+            }
+        });
+
+        let verifiedCount = 0;
+        let unverifiedCount = 0;
+        let zeroDeviceCount = 0;
+
+        const unverifiedList = [];
+        const zeroDeviceList = [];
+        const verifiedList = [];
+
+        activeUsers.forEach(u => {
+            const userAssets = holderMap.get(u.open_id)?.assets || [];
+            const email = u.email || "";
+            const org = email.includes("@eddu.org") ? "EDDU" : "XPO";
+
+            if (userAssets.length === 0) {
+                zeroDeviceCount++;
+                zeroDeviceList.push({
+                    openId: u.open_id,
+                    name: u.name,
+                    enName: u.en_name || u.name,
+                    email: email,
+                    org,
+                    avatar: u.avatar?.avatar_72 || u.avatar_url || ""
+                });
+            } else {
+                const allVerified = userAssets.every(a => {
+                    const s = a["Audit Status (สถานะการยืนยัน)"];
+                    const sStr = Array.isArray(s) ? s[0] : (s || "");
+                    return sStr.includes("ยืนยันแล้ว") || sStr.includes("Verified");
+                });
+
+                const pendingDevices = userAssets.filter(a => {
+                    const s = a["Audit Status (สถานะการยืนยัน)"];
+                    const sStr = Array.isArray(s) ? s[0] : (s || "");
+                    return !sStr.includes("ยืนยันแล้ว") && !sStr.includes("Verified");
+                }).map(a => ({
+                    record_id: a.record_id,
+                    name: a["Device Name (ชื่อรุ่น/อุปกรณ์)"] || "IT Asset",
+                    tag: a["Asset Tag (เลขทรัพย์สิน)"] || "ไม่ทราบ",
+                    sn: a["Serial Number (S/N)"] || "---",
+                    status: Array.isArray(a["Audit Status (สถานะการยืนยัน)"]) ? a["Audit Status (สถานะการยืนยัน)"][0] : (a["Audit Status (สถานะการยืนยัน)"] || "รอการยืนยัน")
+                }));
+
+                if (allVerified) {
+                    verifiedCount++;
+                    verifiedList.push({
+                        openId: u.open_id,
+                        name: u.name,
+                        enName: u.en_name || u.name,
+                        email: email,
+                        org,
+                        avatar: u.avatar?.avatar_72 || u.avatar_url || "",
+                        deviceCount: userAssets.length
+                    });
+                } else {
+                    unverifiedCount++;
+                    unverifiedList.push({
+                        openId: u.open_id,
+                        name: u.name,
+                        enName: u.en_name || u.name,
+                        email: email,
+                        org,
+                        avatar: u.avatar?.avatar_72 || u.avatar_url || "",
+                        deviceCount: userAssets.length,
+                        pendingDevices
+                    });
+                }
+            }
+        });
+
+        const totalActive = activeUsers.length;
+        res.json({
+            ok: true,
+            stats: {
+                totalActive,
+                verifiedCount,
+                unverifiedCount,
+                zeroDeviceCount,
+                verifiedPct: totalActive > 0 ? Math.round((verifiedCount / totalActive) * 100) : 0,
+                unverifiedPct: totalActive > 0 ? Math.round((unverifiedCount / totalActive) * 100) : 0,
+                zeroDevicePct: totalActive > 0 ? Math.round((zeroDeviceCount / totalActive) * 100) : 0,
+                timestamp: new Date().toISOString()
+            },
+            unverifiedList,
+            zeroDeviceList,
+            verifiedList
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.post('/api/admin/live-monitor/nudge', requireAdminAuth, async (req, res) => {
+    try {
+        const { openId, name, type, devices } = req.body;
+        if (!openId) return res.status(400).json({ ok: false, message: "openId required" });
+
+        if (name && (name.includes("Pongsatorn") || name.includes("Nop."))) {
+            return res.status(403).json({ ok: false, message: "ข้ามการส่งแจ้งเตือนหากรรมการบริษัท (Director Whitelist)" });
+        }
+
+        let card;
+        const portalUrl = "https://it-asset-portal.shine-toothbrush.workers.dev";
+        if (type === "REGISTER") {
+            card = {
+                config: { wide_screen_mode: true },
+                header: {
+                    template: "turquoise",
+                    title: { tag: "plain_text", content: "📦 แจ้งเตือน: ขึ้นทะเบียนอุปกรณ์ IT ประจำตัว" }
+                },
+                elements: [
+                    {
+                        tag: "div",
+                        text: {
+                            tag: "lark_md",
+                            content: `สวัสดีครับคุณ **${name}** 👋\n\nขณะนี้ระบบตรวจพบว่าคุณยังไม่มีรายการอุปกรณ์ประจำตัวในฐานข้อมูล IT ขอความร่วมมือกดปุ่มด้านล่างเพื่อขึ้นทะเบียนเครื่องครับ:`
+                        }
+                    },
+                    {
+                        tag: "action",
+                        actions: [
+                            {
+                                tag: "button",
+                                text: { tag: "plain_text", content: "➕ ลงทะเบียนเครื่องใหม่ / เพิ่มเติม" },
+                                type: "primary",
+                                url: `${portalUrl}/?tab=registerTab&emp=${encodeURIComponent(name)}`
+                            }
+                        ]
+                    }
+                ]
+            };
+        } else {
+            const devListStr = (devices || []).map(d => `• **${d.name}** (Tag: \`${d.tag}\` | S/N: \`${d.sn}\`)`).join("\n");
+            card = {
+                config: { wide_screen_mode: true },
+                header: {
+                    template: "orange",
+                    title: { tag: "plain_text", content: "⏳ แจ้งเตือน: กดยืนยันเครื่อง IT ประจำตัว" }
+                },
+                elements: [
+                    {
+                        tag: "div",
+                        text: {
+                            tag: "lark_md",
+                            content: `สวัสดีครับคุณ **${name}** 👋\n\nคุณมีอุปกรณ์รอการยืนยันความถูกต้องในระบบ IT Asset Hub:\n\n${devListStr || "• อุปกรณ์ประจำตัวของคุณ"}\n\nโปรดตรวจสอบสภาพและกดปุ่มยืนยันด้านล่างนี้ครับ:`
+                        }
+                    },
+                    {
+                        tag: "action",
+                        actions: [
+                            {
+                                tag: "button",
+                                text: { tag: "plain_text", content: "✅ ตรวจสอบและยืนยันเครื่องของฉัน" },
+                                type: "primary",
+                                url: `${portalUrl}/?tab=verifyTab&emp=${encodeURIComponent(name)}`
+                            }
+                        ]
+                    }
+                ]
+            };
+        }
+
+        const sendRes = await larkDirect.sendInteractiveCard(openId, card);
+        res.json({ ok: true, message: `ส่งแจ้งเตือนหา ${name} สำเร็จ!`, sendRes });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
 // 11. Bot Admin Endpoints: Test Console & Manual Trigger (Protected by requireAdminAuth)
 app.get('/api/admin/bot/config', requireAdminAuth, (req, res) => {
     res.json({
