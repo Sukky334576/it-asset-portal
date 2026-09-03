@@ -1023,11 +1023,22 @@ export default {
         const recordsToDelete = [];
         for (const [sn, list] of Object.entries(snMap)) {
           if (list.length > 1) {
-            const verifiedIdx = list.findIndex(item => {
+            // 1. Prioritize verified employee
+            let keepIndex = list.findIndex(item => {
               const s = getSingleValue(item["Audit Status (สถานะการยืนยัน)"]);
               return s && s.includes("ยืนยันแล้ว");
             });
-            const keepIndex = verifiedIdx >= 0 ? verifiedIdx : 0;
+
+            // 2. If not found, prioritize named employee over "ส่วนกลาง" / null
+            if (keepIndex === -1) {
+              keepIndex = list.findIndex(item => {
+                const h = getHolderName(item["Current Holder (ผู้ถือครองปัจจุบัน)"]);
+                return h && !h.includes("ส่วนกลาง") && !h.includes("รอจัดสรร");
+              });
+            }
+
+            if (keepIndex === -1) keepIndex = 0;
+
             list.forEach((item, idx) => {
               if (idx !== keepIndex) recordsToDelete.push(item.record_id);
             });

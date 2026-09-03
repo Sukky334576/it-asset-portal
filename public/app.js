@@ -1903,22 +1903,41 @@ document.addEventListener('DOMContentLoaded', () => {
         grp.items.forEach((item, idx) => {
           const h = item["Current Holder (ผู้ถือครองปัจจุบัน)"];
           const holderName = getSafeHolderName(h, "ส่วนกลาง (Central Stock)");
+          const rawAudit = item["Audit Status (สถานะการยืนยัน)"];
+          const auditStr = Array.isArray(rawAudit) ? rawAudit[0] : (rawAudit || "");
+          const isVerified = auditStr.includes("ยืนยันแล้ว") || auditStr.includes("Verified");
+          const isCentral = holderName.includes("ส่วนกลาง") || holderName.includes("รอจัดสรร");
 
-          const isKeepCandidate = idx === 0;
+          let badgeHtml = "";
+          if (isVerified) {
+            badgeHtml = `<span class="tag" style="background:#dcfce7; color:#166534; font-weight:600;">🟢 ยืนยันแล้ว (แนะนำคงไว้)</span>`;
+          } else if (isCentral) {
+            badgeHtml = `<span class="tag" style="background:#f1f5f9; color:#475569; font-weight:600;">🏢 สต็อกส่วนกลาง</span>`;
+          } else {
+            badgeHtml = `<span class="tag" style="background:#fef3c7; color:#92400e; font-weight:600;">🟡 แถวในระบบ</span>`;
+          }
+
+          const otherIds = grp.items.filter(it => it.record_id !== item.record_id).map(it => it.record_id);
+
           rows.push(`
-            <tr style="background: ${isKeepCandidate ? '#f0fdf4' : '#fffbeb'};">
-              <td><span class="tag" style="background:${isKeepCandidate ? '#dcfce7' : '#fef3c7'}; color:${isKeepCandidate ? '#166534' : '#92400e'}; font-weight:600;">${isKeepCandidate ? '🟢 แถวต้นฉบับ' : '🟡 คู่แฝดที่ซ้ำ'}</span></td>
+            <tr style="background: ${isVerified ? '#f0fdf4' : (isCentral ? '#f8fafc' : '#fffbeb')};">
+              <td>${badgeHtml}</td>
               <td><strong>${holderName}</strong></td>
               <td>${item["Device Name (ชื่อรุ่น/อุปกรณ์)"] || "-"}</td>
               <td>${item["Asset Tag (เลขทรัพย์สิน)"] || "-"}</td>
               <td><strong><code>${grp.sn}</code></strong></td>
-              <td><span style="font-size:0.75rem; color:var(--text-muted);">พบซ้ำ ${grp.count} แถวในระบบ</span></td>
+              <td><span style="font-size:0.75rem; color:var(--text-muted);">พบซ้ำ ${grp.count} แถว</span></td>
               <td>
-                ${!isKeepCandidate ? `
-                  <button class="btn btn-danger btn-sm btn-delete-single-record" data-id="${item.record_id}" style="padding: 2px 8px; font-size: 0.75rem;">
-                    🗑️ ลบคู่แฝดนี้
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  ${otherIds.length > 0 ? `
+                    <button class="btn btn-success btn-sm btn-keep-this-record" data-id="${item.record_id}" data-other-ids="${otherIds.join(',')}" data-name="${holderName}" data-sn="${grp.sn}" style="padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">
+                      ✅ คงแถวนี้ (ลบคู่แฝดอื่น)
+                    </button>
+                  ` : ''}
+                  <button class="btn btn-danger btn-sm btn-delete-single-record" data-id="${item.record_id}" data-name="${holderName}" data-sn="${grp.sn}" style="padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">
+                    🗑️ ลบแถวนี้
                   </button>
-                ` : `<span style="color:#166534; font-size:0.75rem; font-weight:600;">(คงไว้)</span>`}
+                </div>
               </td>
             </tr>
           `);
@@ -1931,11 +1950,48 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.duplicatePreviewTbody.innerHTML = rows.join('');
       }
 
+      // Attach Keep This (Delete Others) listeners
+      elements.duplicatePreviewTbody.querySelectorAll('.btn-keep-this-record').forEach(b => {
+        b.addEventListener('click', async () => {
+          const recId = b.getAttribute('data-id');
+          const otherIdsStr = b.getAttribute('data-other-ids') || '';
+          const otherIds = otherIdsStr.split(',').filter(Boolean);
+          const name = b.getAttribute('data-name');
+          const sn = b.getAttribute('data-sn');
+
+          if (otherIds.length === 0) return;
+          if (!confirm(`คุณต้องการ "คงรายการของ ${name}" (S/N: ${sn}) ไว้ในระบบ และสั่งลบแถวคู่แฝดที่ซ้ำทั้งหมด (${otherIds.length} แถว) ใช่หรือไม่?`)) return;
+
+          b.disabled = true;
+          b.textContent = 'กำลังลบแถวอื่น...';
+
+          try {
+            const delRes = await adminFetch('/api/admin/duplicates/batch-delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ recordIds: otherIds })
+            }).then(r => r.json());
+
+            if (delRes.ok) {
+              showToast(`เก็บแถวของ ${name} เรียบร้อย และลบแถวคู่แฝดที่ซ้ำออกแล้ว!`, 'success');
+              await loadAllData(true);
+              await loadDuplicateStats();
+            } else {
+              showToast(delRes.message || 'เกิดข้อผิดพลาด', 'error');
+            }
+          } catch (err) {
+            showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+          }
+        });
+      });
+
       // Attach single delete listeners
       elements.duplicatePreviewTbody.querySelectorAll('.btn-delete-single-record').forEach(b => {
         b.addEventListener('click', async () => {
           const recId = b.getAttribute('data-id');
-          if (!confirm("คุณต้องการลบแถวนี้ออกจาก Lark Base ทันทีใช่หรือไม่?")) return;
+          const name = b.getAttribute('data-name') || 'รายการนี้';
+          const sn = b.getAttribute('data-sn') || '';
+          if (!confirm(`คุณต้องการลบแถวของ "${name}" ${sn ? `(S/N: ${sn})` : ''} ออกจาก Lark Base ทันทีใช่หรือไม่?`)) return;
           b.disabled = true;
           b.textContent = "...";
           try {
@@ -1945,9 +2001,11 @@ document.addEventListener('DOMContentLoaded', () => {
               body: JSON.stringify({ recordIds: [recId] })
             }).then(r => r.json());
             if (delRes.ok) {
-              showToast(delRes.message, "success");
+              showToast(delRes.message || 'ลบแถวสำเร็จ!', "success");
               await loadAllData(true);
               await loadDuplicateStats();
+            } else {
+              showToast(delRes.message || 'เกิดข้อผิดพลาดในการลบ', "error");
             }
           } catch (err) {
             showToast("เกิดข้อผิดพลาด: " + err.message, "error");

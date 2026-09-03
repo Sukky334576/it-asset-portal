@@ -1581,12 +1581,22 @@ app.post('/api/admin/duplicates/auto-clean', requireAdminAuth, async (req, res) 
         const auditEntries = [];
 
         for (const [sn, list] of Object.entries(snMap)) {
-            if (list.length > 1) {
-                const verifiedIdx = list.findIndex(item => {
+                let keepIndex = list.findIndex(item => {
                     const s = Array.isArray(item["Audit Status (สถานะการยืนยัน)"]) ? item["Audit Status (สถานะการยืนยัน)"][0] : item["Audit Status (สถานะการยืนยัน)"];
                     return s && s.includes("ยืนยันแล้ว");
                 });
-                const keepIndex = verifiedIdx >= 0 ? verifiedIdx : 0;
+
+                if (keepIndex === -1) {
+                    keepIndex = list.findIndex(item => {
+                        const h = item["Current Holder (ผู้ถือครองปัจจุบัน)"];
+                        let hName = "";
+                        if (Array.isArray(h) && h[0]) hName = h[0].name || h[0].id;
+                        else if (typeof h === 'object' && h?.name) hName = h.name;
+                        return hName && !hName.includes("ส่วนกลาง") && !hName.includes("รอจัดสรร");
+                    });
+                }
+
+                if (keepIndex === -1) keepIndex = 0;
                 const keptItem = list[keepIndex];
 
                 list.forEach((item, idx) => {
