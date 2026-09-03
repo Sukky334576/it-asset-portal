@@ -281,6 +281,19 @@ document.addEventListener('DOMContentLoaded', () => {
     onboardingNotesInput: document.getElementById('onboardingNotesInput'),
     onboardingKitList: document.getElementById('onboardingKitList'),
 
+    // Edit Task Modal Elements
+    editTaskModalOverlay: document.getElementById('editTaskModalOverlay'),
+    editTaskModalCloseBtn: document.getElementById('editTaskModalCloseBtn'),
+    editTaskModalCancelBtn: document.getElementById('editTaskModalCancelBtn'),
+    editTaskModalSaveBtn: document.getElementById('editTaskModalSaveBtn'),
+    editTaskModalDeleteBtn: document.getElementById('editTaskModalDeleteBtn'),
+    editTaskId: document.getElementById('editTaskId'),
+    editTaskEmployeeName: document.getElementById('editTaskEmployeeName'),
+    editTaskOrgSelect: document.getElementById('editTaskOrgSelect'),
+    editTaskDateInput: document.getElementById('editTaskDateInput'),
+    editTaskStageSelect: document.getElementById('editTaskStageSelect'),
+    editTaskNotesInput: document.getElementById('editTaskNotesInput'),
+
     // Toast
     toastContainer: document.getElementById('toastContainer')
   };
@@ -2786,7 +2799,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="task-card ${cardClass}" id="task-${task.id}">
         <div class="task-header">
           <div class="task-title">${task.employeeName}</div>
-          ${typeBadge}
+          <div style="display: flex; align-items: center; gap: 6px;">
+            ${typeBadge}
+            <button class="btn-edit-task" data-id="${task.id}" title="แก้ไขข้อมูล / ย้ายสถานะ" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 0.75rem; color: #334155; font-weight: 500;">✏️ แก้ไข</button>
+            <button class="btn-delete-task" data-id="${task.id}" title="ลบรายการ" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 0.75rem; color: #dc2626;">🗑️</button>
+          </div>
         </div>
         <div class="task-meta">
           <div>🏢 สังกัด: <span class="tag tag-org">${task.organization}</span> | 📅 วันที่: <strong>${task.targetDate}</strong></div>
@@ -2825,6 +2842,54 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch (err) {
           showToast("เกิดข้อผิดพลาด: " + err.message, "error");
+        }
+      });
+    });
+
+    // Edit task buttons
+    document.querySelectorAll('.btn-edit-task').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const taskId = btn.getAttribute('data-id');
+        const task = lifecycleState.tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        elements.editTaskId.value = task.id;
+        elements.editTaskEmployeeName.value = task.employeeName || '';
+        elements.editTaskOrgSelect.value = task.organization || 'EDDU';
+        elements.editTaskDateInput.value = task.targetDate || '';
+        elements.editTaskStageSelect.value = task.currentStage || 'WAITING_ADMIN_PACK';
+        elements.editTaskNotesInput.value = task.notes || '';
+
+        elements.editTaskModalOverlay.style.display = 'flex';
+      });
+    });
+
+    // Delete task buttons
+    document.querySelectorAll('.btn-delete-task').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const taskId = btn.getAttribute('data-id');
+        const task = lifecycleState.tasks.find(t => t.id === taskId);
+        const name = task ? task.employeeName : taskId;
+
+        if (!confirm(`คุณต้องการลบ Task ของ "${name}" ใช่หรือไม่?`)) return;
+
+        try {
+          const res = await lifecycleFetch('/api/lifecycle/tasks/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId })
+          }).then(r => r.json());
+
+          if (res.ok) {
+            showToast(res.message || 'ลบรายการสำเร็จ', 'success');
+            await loadLifecycleTasks();
+          } else {
+            showToast(res.message || 'เกิดข้อผิดพลาดในการลบ', 'error');
+          }
+        } catch (err) {
+          showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
         }
       });
     });
@@ -2973,6 +3038,87 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.onboardingModalSubmitBtn.disabled = false;
         elements.onboardingModalSubmitBtn.textContent = "🚀 ส่งเรื่องให้ Admin จัดเตรียมของ";
       }
+    });
+  }
+
+  // Edit Task Modal Event Handlers
+  if (elements.editTaskModalSaveBtn) {
+    elements.editTaskModalSaveBtn.addEventListener('click', async () => {
+      const taskId = elements.editTaskId.value;
+      const employeeName = elements.editTaskEmployeeName.value.trim();
+      const organization = elements.editTaskOrgSelect.value;
+      const targetDate = elements.editTaskDateInput.value;
+      const currentStage = elements.editTaskStageSelect.value;
+      const notes = elements.editTaskNotesInput.value.trim();
+      const actor = sessionStorage.getItem('lifecycle_actor_name') || 'Staff';
+
+      if (!employeeName) {
+        showToast('กรุณาระบุชื่อพนักงาน', 'warning');
+        return;
+      }
+
+      elements.editTaskModalSaveBtn.disabled = true;
+      elements.editTaskModalSaveBtn.textContent = 'กำลังบันทึก...';
+
+      try {
+        const res = await lifecycleFetch('/api/lifecycle/tasks/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId, employeeName, organization, targetDate, currentStage, notes, actor })
+        }).then(r => r.json());
+
+        if (res.ok) {
+          showToast(res.message || 'บันทึกการแก้ไขสำเร็จ!', 'success');
+          elements.editTaskModalOverlay.style.display = 'none';
+          await loadLifecycleTasks();
+        } else {
+          showToast(res.message || 'เกิดข้อผิดพลาดในการแก้ไข', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      } finally {
+        elements.editTaskModalSaveBtn.disabled = false;
+        elements.editTaskModalSaveBtn.textContent = '💾 บันทึกการแก้ไข';
+      }
+    });
+  }
+
+  if (elements.editTaskModalDeleteBtn) {
+    elements.editTaskModalDeleteBtn.addEventListener('click', async () => {
+      const taskId = elements.editTaskId.value;
+      const task = lifecycleState.tasks.find(t => t.id === taskId);
+      const name = task ? task.employeeName : taskId;
+
+      if (!confirm(`คุณต้องการลบ Task ของ "${name}" ใช่หรือไม่?`)) return;
+
+      try {
+        const res = await lifecycleFetch('/api/lifecycle/tasks/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId })
+        }).then(r => r.json());
+
+        if (res.ok) {
+          showToast('ลบ Task เรียบร้อยแล้ว', 'success');
+          elements.editTaskModalOverlay.style.display = 'none';
+          await loadLifecycleTasks();
+        } else {
+          showToast(res.message || 'เกิดข้อผิดพลาดในการลบ', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      }
+    });
+  }
+
+  if (elements.editTaskModalCloseBtn) {
+    elements.editTaskModalCloseBtn.addEventListener('click', () => {
+      elements.editTaskModalOverlay.style.display = 'none';
+    });
+  }
+  if (elements.editTaskModalCancelBtn) {
+    elements.editTaskModalCancelBtn.addEventListener('click', () => {
+      elements.editTaskModalOverlay.style.display = 'none';
     });
   }
 

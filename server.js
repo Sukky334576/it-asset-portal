@@ -2144,7 +2144,50 @@ app.post('/api/lifecycle/tasks/advance', requireLifecycleAuth, async (req, res) 
     }
 });
 
+// Update Task (Protected by requireLifecycleAuth)
+app.post('/api/lifecycle/tasks/update', requireLifecycleAuth, (req, res) => {
+    try {
+        const { taskId, employeeName, organization, targetDate, currentStage, notes, actor } = req.body;
+        if (!taskId) return res.status(400).json({ ok: false, message: "taskId required" });
+        const tasks = lifecycleService.getTasks();
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return res.status(404).json({ ok: false, message: "Task not found" });
+
+        if (employeeName) task.employeeName = sanitizeString(employeeName, 100);
+        if (organization) task.organization = sanitizeString(organization, 20);
+        if (targetDate) task.targetDate = sanitizeString(targetDate, 20);
+        if (notes !== undefined) task.notes = sanitizeString(notes, 500);
+        if (currentStage) {
+            const oldStage = task.currentStage;
+            task.currentStage = currentStage;
+            if (!task.history) task.history = [];
+            task.history.push({
+                stage: currentStage,
+                actor: actor || "Staff",
+                note: `ย้ายสถานะจาก ${oldStage} เป็น ${currentStage}`,
+                timestamp: new Date().toISOString()
+            });
+        }
+        lifecycleService.saveTasks();
+        res.json({ ok: true, message: "แก้ไขข้อมูล Task สำเร็จ!", task });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
 // Delete Task (Protected by requireLifecycleAuth)
+app.post('/api/lifecycle/tasks/delete', requireLifecycleAuth, (req, res) => {
+    try {
+        const { taskId } = req.body;
+        const deleted = lifecycleService.deleteTask(taskId);
+        if (!deleted) return res.status(404).json({ ok: false, message: "Task not found" });
+        res.json({ ok: true, message: "ลบ Task เรียบร้อยแล้ว", task: deleted });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// Delete Task via HTTP DELETE
 app.delete('/api/lifecycle/tasks/:id', requireLifecycleAuth, (req, res) => {
     try {
         const deleted = lifecycleService.deleteTask(req.params.id);

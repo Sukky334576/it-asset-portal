@@ -1243,6 +1243,70 @@ export default {
         return jsonResponse({ ok: true, message: "อัปเดตขั้นตอนงานสำเร็จ!", task });
       }
 
+      if ((pathname === "/api/lifecycle/tasks/update" && method === "POST") || (pathname.startsWith("/api/lifecycle/tasks/") && method === "PUT")) {
+        if (!requireLifecycle(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED" }, 401);
+        const body = await request.json().catch(() => ({}));
+        const taskId = body.taskId || pathname.split("/").pop();
+        if (!taskId) return jsonResponse({ ok: false, message: "taskId required" }, 400);
+
+        let tasks = [];
+        if (env.IT_ASSET_KV) {
+          const raw = await env.IT_ASSET_KV.get("lifecycle_tasks");
+          if (raw) {
+            try { tasks = JSON.parse(raw); } catch (e) { tasks = []; }
+          }
+        }
+
+        const taskIndex = tasks.findIndex(t => t.id === taskId);
+        if (taskIndex === -1) return jsonResponse({ ok: false, message: "Task not found" }, 404);
+
+        const task = tasks[taskIndex];
+        if (body.employeeName) task.employeeName = sanitizeString(body.employeeName, 100);
+        if (body.organization) task.organization = sanitizeString(body.organization, 20);
+        if (body.targetDate) task.targetDate = sanitizeString(body.targetDate, 20);
+        if (body.notes !== undefined) task.notes = sanitizeString(body.notes, 500);
+        if (body.currentStage) {
+          const oldStage = task.currentStage;
+          task.currentStage = body.currentStage;
+          if (!task.history) task.history = [];
+          task.history.push({
+            stage: body.currentStage,
+            actor: body.actor || "Staff",
+            note: `ย้ายสถานะจาก ${oldStage} เป็น ${body.currentStage}`,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        tasks[taskIndex] = task;
+        if (env.IT_ASSET_KV) {
+          await env.IT_ASSET_KV.put("lifecycle_tasks", JSON.stringify(tasks));
+        }
+
+        return jsonResponse({ ok: true, message: "แก้ไขข้อมูล Task สำเร็จ!", task });
+      }
+
+      if ((pathname === "/api/lifecycle/tasks/delete" && method === "POST") || (pathname.startsWith("/api/lifecycle/tasks/") && method === "DELETE")) {
+        if (!requireLifecycle(request)) return jsonResponse({ ok: false, code: "UNAUTHORIZED" }, 401);
+        const body = await request.json().catch(() => ({}));
+        const taskId = body.taskId || pathname.split("/").pop();
+        if (!taskId) return jsonResponse({ ok: false, message: "taskId required" }, 400);
+
+        let tasks = [];
+        if (env.IT_ASSET_KV) {
+          const raw = await env.IT_ASSET_KV.get("lifecycle_tasks");
+          if (raw) {
+            try { tasks = JSON.parse(raw); } catch (e) { tasks = []; }
+          }
+        }
+
+        const newTasks = tasks.filter(t => t.id !== taskId);
+        if (env.IT_ASSET_KV) {
+          await env.IT_ASSET_KV.put("lifecycle_tasks", JSON.stringify(newTasks));
+        }
+
+        return jsonResponse({ ok: true, message: "ลบ Task เรียบร้อยแล้ว!" });
+      }
+
       // ---------------- STATIC ASSETS ---------------- //
       if (env.ASSETS) {
         return env.ASSETS.fetch(request);
