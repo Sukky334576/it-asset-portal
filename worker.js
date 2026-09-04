@@ -802,10 +802,15 @@ export default {
 
         // Check KV for BYOD Declarations
         let byodMap = {};
+        let resignedNames = [];
         if (env.IT_ASSET_KV) {
           const raw = await env.IT_ASSET_KV.get("byod_declarations");
           if (raw) {
             try { byodMap = JSON.parse(raw); } catch (e) { byodMap = {}; }
+          }
+          const resJson = await env.IT_ASSET_KV.get("resigned_staff");
+          if (resJson) {
+            try { resignedNames = JSON.parse(resJson); } catch (e) { resignedNames = []; }
           }
         }
 
@@ -814,12 +819,14 @@ export default {
         let zeroDeviceCount = 0;
         let byodCount = 0;
         let directorCount = 0;
+        let resignedCount = 0;
 
         const unverifiedList = [];
         const zeroDeviceList = [];
         const verifiedList = [];
         const directorList = [];
         const byodList = [];
+        const resignedList = [];
 
         activeUsers.forEach(u => {
           const userAssets = holderMap.get(u.open_id)?.assets || [];
@@ -838,6 +845,31 @@ export default {
               org,
               avatar: u.avatar?.avatar_72 || u.avatar_url || "",
               isDirector: true
+            });
+            return;
+          }
+
+          const isResigned = resignedNames.some(rn => 
+            (name && (name.includes(rn) || rn.includes(name))) ||
+            (u.en_name && (u.en_name.includes(rn) || rn.includes(u.en_name)))
+          );
+
+          if (isResigned) {
+            resignedCount++;
+            resignedList.push({
+              openId: u.open_id,
+              name: u.name,
+              enName: u.en_name || u.name,
+              email: u.email || "",
+              org,
+              avatar: u.avatar?.avatar_72 || u.avatar_url || "",
+              deviceCount: userAssets.length,
+              pendingDevices: userAssets.map(a => ({
+                name: a["Device Name (ชื่อรุ่น/อุปกรณ์)"] || "IT Asset",
+                tag: a["Asset Tag (เลขทรัพย์สิน)"] || "ไม่ทราบ",
+                sn: a["Serial Number (S/N)"] || "---"
+              })),
+              isResigned: true
             });
             return;
           }
@@ -936,13 +968,15 @@ export default {
             unverifiedPct: totalActive > 0 ? Math.round((unverifiedCount / totalActive) * 100) : 0,
             zeroDevicePct: totalActive > 0 ? Math.round((zeroDeviceCount / totalActive) * 100) : 0,
             byodPct: totalActive > 0 ? Math.round((byodCount / totalActive) * 100) : 0,
+            resignedCount,
             timestamp: new Date().toISOString()
           },
           unverifiedList,
           zeroDeviceList,
           verifiedList,
           directorList,
-          byodList
+          byodList,
+          resignedList
         });
       }
 
@@ -954,6 +988,18 @@ export default {
         // Check if director Nop
         if (name && (name.includes("Pongsatorn") || name.includes("Nop."))) {
           return jsonResponse({ ok: false, message: "ข้ามการส่งแจ้งเตือนหากรรมการบริษัท (Director Whitelist)" }, 403);
+        }
+
+        // Check if resigned staff
+        let resignedNames = [];
+        if (env.IT_ASSET_KV) {
+          const resJson = await env.IT_ASSET_KV.get("resigned_staff");
+          if (resJson) {
+            try { resignedNames = JSON.parse(resJson); } catch (e) { resignedNames = []; }
+          }
+        }
+        if (resignedNames.some(rn => (name && (name.includes(rn) || rn.includes(name))))) {
+          return jsonResponse({ ok: false, message: "ข้ามการส่งแจ้งเตือน: พนักงานลาออกแล้ว (ใช้ Lark เพื่อประสานงาน)" }, 403);
         }
 
         // Check if employee already declared BYOD
