@@ -2286,17 +2286,17 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.btnCopyPendingList.addEventListener('click', () => {
       let textToCopy = "";
       if (currentMonitorFilter === 'ZERO') {
-        const names = (liveMonitorData.zeroDeviceList || []).map((u, i) => `  ${i + 1}. ${u.name} (${u.org})`).join('\n');
+        const names = (liveMonitorData.zeroDeviceList || []).map((u, i) => `  ${i + 1}. ${u.name}`).join('\n');
         textToCopy = `📢 รายชื่อพนักงานที่ยังไม่ขึ้นทะเบียนเครื่องในระบบ (${liveMonitorData.zeroDeviceList?.length || 0} คน):\n${names}\n\n👉 โปรดลงทะเบียนเครื่อง หรือกดยืนยันใช้เครื่องส่วนตัว (BYOD) ได้ที่: https://it-asset-portal.shine-toothbrush.workers.dev`;
       } else if (currentMonitorFilter === 'BYOD') {
-        const names = (liveMonitorData.byodList || []).map((u, i) => `  ${i + 1}. ${u.name} (${u.org})`).join('\n');
+        const names = (liveMonitorData.byodList || []).map((u, i) => `  ${i + 1}. ${u.name}`).join('\n');
         textToCopy = `🟣 รายชื่อพนักงานที่ยืนยันใช้อุปกรณ์ส่วนตัว 100% (BYOD) (${liveMonitorData.byodList?.length || 0} คน):\n${names}`;
       } else if (currentMonitorFilter === 'VERIFIED') {
-        const names = (liveMonitorData.verifiedList || []).map((u, i) => `  ${i + 1}. ${u.name} (${u.org})`).join('\n');
+        const names = (liveMonitorData.verifiedList || []).map((u, i) => `  ${i + 1}. ${u.name}`).join('\n');
         textToCopy = `✅ รายชื่อพนักงานที่ยืนยันเครื่องเรียบร้อยแล้ว (${liveMonitorData.verifiedList?.length || 0} คน):\n${names}`;
       } else if (currentMonitorFilter === 'ALL') {
-        const pNames = (liveMonitorData.unverifiedList || []).map((u, i) => `  ${i + 1}. ${u.name} (${u.org}) - ค้าง ${u.pendingDevices?.length || 0} ชิ้น`).join('\n');
-        const zNames = (liveMonitorData.zeroDeviceList || []).map((u, i) => `  ${i + 1}. ${u.name} (${u.org})`).join('\n');
+        const pNames = (liveMonitorData.unverifiedList || []).map((u, i) => `  ${i + 1}. ${u.name} - ค้าง ${u.pendingDevices?.length || 0} รายการ`).join('\n');
+        const zNames = (liveMonitorData.zeroDeviceList || []).map((u, i) => `  ${i + 1}. ${u.name}`).join('\n');
         textToCopy = `📢 [ประกาศ] สรุปรายชื่อพนักงานที่ต้องดำเนินการในระบบ IT Asset Hub
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🟡 หมวดที่ 1: มีเครื่องในระบบ แต่ยังไม่ได้กดยืนยัน (${liveMonitorData.unverifiedList?.length || 0} ท่าน)
@@ -2314,7 +2314,7 @@ ${zNames || "  - ไม่มี -"}
 
 ขอความร่วมมือทุกท่านดำเนินการให้เสร็จสิ้น ขอบคุณครับ 🙏`;
       } else {
-        const names = (liveMonitorData.unverifiedList || []).map((u, i) => `  ${i + 1}. ${u.name} (${u.org}) - ค้างยืนยัน ${u.pendingDevices?.length || 0} ชิ้น`).join('\n');
+        const names = (liveMonitorData.unverifiedList || []).map((u, i) => `  ${i + 1}. ${u.name} - ค้างยืนยัน ${u.pendingDevices?.length || 0} ชิ้น`).join('\n');
         textToCopy = `⏳ รายชื่อพนักงานที่มีเครื่องรอการยืนยัน (${liveMonitorData.unverifiedList?.length || 0} คน):\n${names}\n\n👉 โปรดกดยืนยันเครื่องได้ที่: https://it-asset-portal.shine-toothbrush.workers.dev/?tab=verifyTab`;
       }
       navigator.clipboard.writeText(textToCopy).then(() => {
