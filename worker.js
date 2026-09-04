@@ -748,7 +748,7 @@ export default {
         let users = [];
 
         // Check KV Cache for Directory Users
-        if (env.IT_ASSET_KV && !forceRefresh) {
+        if (env.IT_ASSET_KV) {
           const cached = await env.IT_ASSET_KV.get("company_directory_users");
           if (cached) {
             try { users = JSON.parse(cached); } catch (e) { users = []; }
